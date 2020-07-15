@@ -359,7 +359,7 @@ namespace Rock.Web
         /// </returns>
         private static bool IsPageExclusiveToAnotherSite( SiteCache requestingSite, int? pageId, int? routeId )
         {
-            if ( pageId != null || requestingSite == null )
+            if ( pageId == null || requestingSite == null )
             {
                 // The default value is not to be exclusive
                 return false;
