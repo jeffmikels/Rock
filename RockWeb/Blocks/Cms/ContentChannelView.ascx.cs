@@ -20,13 +20,10 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Caching;
-using System.Text;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-using Amazon.S3.Model.Internal.MarshallTransformations;
 using DotLiquid;
 using Rock;
 using Rock.Attribute;
@@ -498,7 +495,7 @@ $(document).ready(function() {
             bool isSetPageTitleEnabled = GetAttributeValue( "SetPageTitle" ).AsBoolean();
             bool isRssAutodiscoverEnabled = GetAttributeValue( "RssAutodiscover" ).AsBoolean();
             bool isTagListEnabled = GetAttributeValue( "EnableTagList" ).AsBoolean();
-            
+
             bool isQueryParameterFilteringEnabled = GetAttributeValue( "QueryParameterFiltering" ).AsBoolean( false );
             string metaDescriptionAttributeValue = GetAttributeValue( "MetaDescriptionAttribute" );
             string metaImageAttributeValue = GetAttributeValue( "MetaImageAttribute" );
@@ -519,7 +516,7 @@ $(document).ready(function() {
             {
                 var pageRef = new Rock.Web.PageReference( CurrentPageReference );
                 pageRef.Parameters.AddOrReplace( "Page", "PageNum" );
-                
+
                 Dictionary<string, object> linkedPages = new Dictionary<string, object>();
                 linkedPages.Add( "DetailPage", LinkedPageRoute( "DetailPage" ) );
 
@@ -794,7 +791,7 @@ $(document).ready(function() {
                     var contentChannelItemService = new ContentChannelItemService( rockContext );
 
                     var itemId = PageParameter( "Item" ).AsIntegerOrNull();
-                    
+
 
                     var statuses = new List<ContentChannelItemStatus>();
                     var statusValList = ( GetAttributeValue( "Status" ) ?? "2" ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
@@ -841,7 +838,7 @@ $(document).ready(function() {
                         }
                     }
 
-                    items = new List<ContentChannelItem>(contentChannelItemQuery.Count());
+                    items = new List<ContentChannelItem>( contentChannelItemQuery.Count() );
 
                     // All filtering has been added, now run query, check security and load attributes
                     foreach ( var item in contentChannelItemQuery )
