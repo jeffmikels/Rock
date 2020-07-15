@@ -61,7 +61,7 @@
                                     <Rock:RockCheckBox ID="cbMergeContent" runat="server" Label="Merge Content" Text="Yes"
                                         Help="Enabling this option will result in the content data and attribute values to be merged using the lava template engine." />
                                     <Rock:PagePicker ID="ppDetailPage" runat="server" Label="Detail Page" />
-                                    <Rock:RockCheckBox ID="cbEnableTags" runat="server" Label="Enable Tags" Text="Yes"
+                                    <Rock:RockCheckBox ID="cbEnableTags" runat="server" Label="Enable Tag List" Text="Yes"
                                         Help="Determines if the 'ItemTagList' lava merge field will be populated and passed to the lava template. The ItemTagList is a list of objects with the following fields 'Id', 'Guid', 'Name', 'Count'. Example: {% for tag in ItemTagList %} {{ tag.Name }} ({{ tag.Count }}) {% endfor %} <small><span class='tip tip-lava'></span></small>" />
                                 </div>
                             </div>
