@@ -33,7 +33,7 @@
 
             <%-- Panel Body --%>
             <div class="panel-body">
-                
+
                 <div class="visible-xs-block">
                     <div class="alert alert-warning">
                         This block is not supported on mobile.
@@ -76,7 +76,7 @@
                                     <Rock:GroupPicker ID="gpPickedGroups" runat="server" Label="" AllowMultiSelect="true" OnValueChanged="gpPickedGroups_ValueChanged" CssClass="occurrences-groups-picker" LimitToSchedulingEnabledGroups="true" />
                                 </div>
                                 <div class="col-md-3">
-                                    <Rock:RockCheckBox ID="cbShowChildGroups" runat="server" Text="Show Child Groups" AutoPostBack="true" OnCheckedChanged="gpPickedGroups_ValueChanged" />
+                                    <asp:LinkButton ID="btnShowChildGroups" runat="server" CssClass="btn" Text="<i class='fa fa-square'></i> Show Child Groups" AutoPostBack="true" OnClick="btnShowChildGroups_Click" />
                                 </div>
 
                                 <!-- Filter for Week -->
@@ -154,7 +154,6 @@
                 <Rock:NotificationBox ID="nbFilterMessage" runat="server" />
                 <Rock:NotificationBox ID="nbAuthorizedGroupsWarning" runat="server" NotificationBoxType="Warning" Dismissable="true" />
                 <Rock:NotificationBox ID="nbSchedulingDisabledWarning" runat="server" NotificationBoxType="Warning" Dismissable="true" />
-                <asp:Literal ID="lDebug" runat="server" />
 
                 <div class="">
                     <asp:Panel ID="pnlSchedulerContainer" runat="server" CssClass="">
@@ -194,6 +193,15 @@
                                             <div class="js-resource resource unselectable" data-status="unscheduled" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-is-scheduled="" data-person-id="">
                                                 <div class="flex">
                                                     <span class="resource-name js-resource-name"></span>
+                                                    
+                                                    <div class="resource-assignment-preference js-resource-assignment-preference">
+                                                        Todo Preference List
+                                                    </div>
+
+                                                    <div class="resource-member-role js-resource-member-role">
+                                                        ToDo Member Role
+                                                    </div>
+
                                                     <div class="resource-meta">
 
                                                         <div class="js-resource-meta text-right"></div>
@@ -273,9 +281,14 @@
                                         </div>
                                     </div>
 
-                                    
 
-                                    <%-- containers for AttendanceOccurrence locations that resources can be dragged into --%>
+
+                                    <%-- containers for AttendanceOccurrence locations that resources can be dragged into
+                                        The occurrences are a Repeater within a Repeater
+                                            Repeater 1 (rptOccurrenceColumns) - The Columns, which are either Groups or Schedule/Day depending on MultiGroup/SingleGroup mode
+                                            Repeater 2 (rptAttendanceOccurrences) - The Occurrences for each column from Repeater 1
+
+                                    --%>
                                     <asp:Panel ID="pnlSchedulerLocations" runat="server" CssClass="locations js-scheduled-occurrences">
                                         <asp:Repeater ID="rptOccurrenceColumns" runat="server" OnItemDataBound="rptOccurrenceColumns_ItemDataBound">
                                             <ItemTemplate>
@@ -288,17 +301,19 @@
                                                 <asp:Panel ID="pnlOccurrenceColumn" runat="server" CssClass="occurrence-column">
                                                     <%-- Occurrence Column Heading when in Multi-Group mode (should Group name with Checkbox --%>
                                                     <asp:Panel ID="pnlMultiGroupModeColumnHeading" runat="server">
-                                                        <h1><asp:Literal ID="lMultiGroupModeColumnGroupNameHtml" runat="server" /></h1>
-                                                        <Rock:RockCheckBox ID="cbMultiGroupModeColumnSelectedGroup" runat="server"
-                                                            SelectedIconCssClass = "fa fa-check-square-o" 
-                                                            UnSelectedIconCssClass = "fa fa-square-o"
-                                                            AutoPostBack = true
-                                                            OnCheckedChanged="cbMultiGroupModeColumnSelectedGroup_CheckedChanged"/>
+                                                        <h1>
+                                                            <asp:Literal ID="lMultiGroupModeColumnGroupNameHtml" runat="server" /></h1>
+                                                        <asp:LinkButton ID="btnMultiGroupModeColumnSelectedGroup" runat="server"
+                                                            CssClass="btn "
+                                                            Text="fa fa-check-square"
+                                                            AutoPostBack="true"
+                                                            OnClick="btnMultiGroupModeColumnSelectedGroup_Click"/>
                                                     </asp:Panel>
 
                                                     <%-- Occurrence Column Heading when in Single-Group mode (should schedule information) --%>
                                                     <asp:Panel ID="pnlSingleGroupModeColumnHeading" runat="server">
-                                                        <h1><asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceDate" runat="server" /></h1>
+                                                        <h1>
+                                                            <asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceDate" runat="server" /></h1>
                                                         <asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceTime" runat="server" />
                                                     </asp:Panel>
 
@@ -373,7 +388,7 @@
                                     </asp:Panel>
                                 </div>
                             </div>
-            </asp:Panel>
+                        </asp:Panel>
                     </asp:Panel>
                 </div>
             </div>

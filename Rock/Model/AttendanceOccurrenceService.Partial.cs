@@ -530,7 +530,6 @@ namespace Rock.Model
         public List<AttendanceOccurrence> CreateMissingAttendanceOccurrences( List<DateTime> occurrenceDateList, int scheduleId, List<int> groupLocationIds )
         {
             var groupLocationQuery = new GroupLocationService( this.Context as RockContext ).GetByIds( groupLocationIds );
-            var schedule = new ScheduleService( this.Context as RockContext ).Get( scheduleId );
 
             List<AttendanceOccurrence> missingAttendanceOccurrenceList = new List<AttendanceOccurrence>();
             foreach ( var occurrenceDate in occurrenceDateList )
@@ -542,20 +541,30 @@ namespace Rock.Model
                             && a.ScheduleId == scheduleId
                             && a.OccurrenceDate == occurrenceDate );
 
-                List<AttendanceOccurrence> missingAttendanceOccurrencesForOccurrenceDate = groupLocationQuery.Where( gl => !attendanceOccurrencesQuery.Any( ao => ao.LocationId == gl.LocationId && ao.GroupId == gl.GroupId ) )
-                                .ToList()
-                                .Select( gl => new AttendanceOccurrence
-                                {
-                                    GroupId = gl.GroupId,
-                                    Group = gl.Group,
-                                    LocationId = gl.LocationId,
-                                    Location = gl.Location,
-                                    ScheduleId = scheduleId,
-                                    Schedule = schedule,
-                                    OccurrenceDate = occurrenceDate
-                                } ).ToList();
+                List<AttendanceOccurrence> missingAttendanceOccurrencesForOccurrenceDate = groupLocationQuery
+                    .Where( gl => !attendanceOccurrencesQuery.Any( ao => ao.LocationId == gl.LocationId && ao.GroupId == gl.GroupId ) )
+                    .ToList()
+                    .Select( gl => new AttendanceOccurrence
+                    {
+                        GroupId = gl.GroupId,
+                        Group = gl.Group,
+                        LocationId = gl.LocationId,
+                        Location = gl.Location,
+                        ScheduleId = scheduleId,
+                        OccurrenceDate = occurrenceDate
+                    } ).ToList();
 
                 missingAttendanceOccurrenceList.AddRange( missingAttendanceOccurrencesForOccurrenceDate );
+            }
+
+            if ( missingAttendanceOccurrenceList.Any() )
+            {
+                // set (Hydrate) the Schedule since ScheduleId has a value
+                var schedule = new ScheduleService( this.Context as RockContext ).Get( scheduleId );
+                foreach ( var missingAttendanceOccurrence in missingAttendanceOccurrenceList )
+                {
+                    missingAttendanceOccurrence.Schedule = schedule;
+                }
             }
 
             return missingAttendanceOccurrenceList;

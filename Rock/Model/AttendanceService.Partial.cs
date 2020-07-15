@@ -27,6 +27,7 @@ using Rock.BulkImport;
 using Rock.Chart;
 using Rock.Communication;
 using Rock.Data;
+using Rock.Web.Cache;
 
 namespace Rock.Model
 {
@@ -848,7 +849,6 @@ namespace Rock.Model
                 occurrenceSundayWeekStartDate = RockDateTime.Today;
             }
 
-
             // get all the occurrences for the selected week for the selected schedules (It could be more than once a week if it is a daily scheduled, or it might not be in the selected week if it is every 2 weeks, etc)
             List<DateTime> scheduleOccurrenceDateTimeList = new List<DateTime>();
             foreach ( var occurrenceSchedule in occurrenceSchedules )
@@ -874,6 +874,7 @@ namespace Rock.Model
             HashSet<int> groupMemberIdsThatLackGroupRequirements;
 
             groupMemberIdsThatLackGroupRequirements = null;
+            GroupTypeCache resourceGroupGroupType = null;
 
             if ( schedulerResourceParameters.ResourceGroupId.HasValue )
             {
@@ -882,6 +883,11 @@ namespace Rock.Model
                     .Where( a => a.GroupMemberStatus == GroupMemberStatus.Active );
 
                 var resourceGroup = groupService.GetNoTracking( schedulerResourceParameters.ResourceGroupId.Value );
+                if ( resourceGroup != null )
+                {
+                    resourceGroupGroupType = GroupTypeCache.Get( resourceGroup.GroupTypeId );
+                }
+
                 if ( resourceGroup?.SchedulingMustMeetRequirements == true )
                 {
                     groupMemberIdsThatLackGroupRequirements = new HashSet<int>( new GroupService( rockContext ).GroupMembersNotMeetingRequirements( resourceGroup, false ).Select( a => a.Key.Id ).ToList().Distinct() );
@@ -906,6 +912,7 @@ namespace Rock.Model
                 var resourceListQuery = groupMemberQry.Select( a => new
                 {
                     GroupMemberId = a.Id,
+                    a.GroupRoleId,
                     a.PersonId,
                     a.Note,
                     a.Person.NickName,
@@ -913,7 +920,13 @@ namespace Rock.Model
                     a.Person.SuffixValueId,
                     a.Person.RecordTypeValueId,
                     a.ScheduleTemplateId,
-                    a.ScheduleStartDate
+                    a.ScheduleStartDate,
+                    MemberAssignments = a.GroupMemberAssignments
+                        .Where(x => x.ScheduleId.HasValue && x.LocationId.HasValue ).Select(s => new
+                        {
+                            ScheduleName = s.Schedule.Name,
+                            LocationName = s.Location.Name
+                        } )
                 } );
 
                 if ( schedulerResourceParameters.GroupMemberFilterType == SchedulerResourceGroupMemberFilterType.ShowMatchingPreference )
@@ -970,10 +983,15 @@ namespace Rock.Model
                     resourceList = resourceList.Where( a => matchingScheduleGroupMemberIdList.Contains( a.GroupMemberId ) ).ToList();
                 }
 
+                var groupTypeRoleCacheLookup = resourceGroupGroupType?.Roles.ToDictionary( k => k.Id, v => v );
+
+
                 schedulerResourceList = resourceList.Select( a => new SchedulerResource
                 {
                     PersonId = a.PersonId,
                     GroupMemberId = a.GroupMemberId,
+                    GroupRole = groupTypeRoleCacheLookup.GetValueOrNull( a.GroupRoleId ),
+                    GroupMemberAssignments = a.GroupMemberAssignments.ToList(),
                     Note = a.Note,
                     PersonNickName = a.NickName,
                     PersonLastName = a.LastName,
@@ -1915,6 +1933,11 @@ namespace Rock.Model
         public override bool HasBlackoutConflict => this.BlackoutDates?.Contains( this.OccurrenceDate ) == true;
     }
 
+    public class SchedulerResourceAssignment
+    {
+
+    }
+
     /// <summary>
     /// Information about a potential scheduler resource (Person) for the GroupScheduler
     /// </summary>
@@ -2084,6 +2107,22 @@ namespace Rock.Model
         ///   <c>true</c> if this instance has scheduling conflict; otherwise, <c>false</c>.
         /// </value>
         public bool? IsAlreadyScheduledForGroup { get; set; }
+
+        /// <summary>
+        /// Gets or sets the group role.
+        /// </summary>
+        /// <value>
+        /// The group role.
+        /// </value>
+        public GroupTypeRoleCache GroupRole { get; set; }
+
+        /// <summary>
+        /// Gets the resource assignments.
+        /// </summary>
+        /// <value>
+        /// The resource assignments.
+        /// </value>
+        public List<SchedulerResourceAssignment> ResourceAssignments { get; set; }
 
         /// <summary>
         /// Converts to string.

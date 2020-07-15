@@ -1292,6 +1292,14 @@ namespace Rock.Web.UI
         }
 
         /// <summary>
+        /// Saves this block's user preferences to the database
+        /// </summary>
+        public void SaveBlockUserPreferences()
+        {
+            SaveUserPreferences( BlockUserPreferencePrefix );
+        }
+
+        /// <summary>
         /// Deletes a user preference value for the current user and block with the specified key
         /// </summary>
         /// <param name="key">A <see cref="System.String"/> representing the name of the key.</param>

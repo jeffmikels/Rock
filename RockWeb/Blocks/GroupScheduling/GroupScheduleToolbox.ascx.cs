@@ -869,7 +869,9 @@ $('#{0}').tooltip();
                     .Select( s => s.ScheduleId.Value ).Distinct().ToList();
 
                 // limit to schedules that haven't had a schedule preference set yet
-                sortedScheduleList = sortedScheduleList.Where( a => !configuredScheduleIds.Contains( a.Id ) ).ToList();
+                sortedScheduleList = sortedScheduleList.Where( a =>
+                    !configuredScheduleIds.Contains( a.Id )
+                    || (selectedScheduleId.HasValue && a.Id == selectedScheduleId.Value ) ).ToList();
 
                 ddlGroupScheduleAssignmentSchedule.Items.Clear();
                 ddlGroupScheduleAssignmentSchedule.Items.Add( new ListItem() );
