@@ -922,9 +922,11 @@ namespace Rock.Model
                     a.ScheduleTemplateId,
                     a.ScheduleStartDate,
                     MemberAssignments = a.GroupMemberAssignments
-                        .Where(x => x.ScheduleId.HasValue && x.LocationId.HasValue ).Select(s => new
+                        .Where( x => x.ScheduleId.HasValue && x.LocationId.HasValue ).Select( s => new
                         {
+                            ScheduleId = s.ScheduleId.Value,
                             ScheduleName = s.Schedule.Name,
+                            LocationId = s.LocationId.Value,
                             LocationName = s.Location.Name
                         } )
                 } );
@@ -991,7 +993,13 @@ namespace Rock.Model
                     PersonId = a.PersonId,
                     GroupMemberId = a.GroupMemberId,
                     GroupRole = groupTypeRoleCacheLookup.GetValueOrNull( a.GroupRoleId ),
-                    GroupMemberAssignments = a.GroupMemberAssignments.ToList(),
+                    ResourceAssignments = a.MemberAssignments.Select( x => new SchedulerResourceAssignment
+                    {
+                        ScheduleId = x.ScheduleId,
+                        ScheduleName = x.ScheduleName,
+                        LocationId = x.LocationId,
+                        LocationName = x.LocationName
+                    } ).ToList(),
                     Note = a.Note,
                     PersonNickName = a.NickName,
                     PersonLastName = a.LastName,
@@ -1935,7 +1943,10 @@ namespace Rock.Model
 
     public class SchedulerResourceAssignment
     {
-
+        public int ScheduleId { get; set; }
+        public string ScheduleName { get; set; }
+        public int LocationId { get; set; }
+        public string LocationName { get; set; }
     }
 
     /// <summary>
