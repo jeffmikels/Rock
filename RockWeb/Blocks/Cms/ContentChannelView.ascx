@@ -61,6 +61,8 @@
                                     <Rock:RockCheckBox ID="cbMergeContent" runat="server" Label="Merge Content" Text="Yes"
                                         Help="Enabling this option will result in the content data and attribute values to be merged using the lava template engine." />
                                     <Rock:PagePicker ID="ppDetailPage" runat="server" Label="Detail Page" />
+                                    <Rock:RockCheckBox ID="cbEnableTags" runat="server" Label="Enable Tags" Text="Yes"
+                                        Help="Determines if the ItemTagList lava parameter will be populated. (Fields: 'Id', 'Guid', 'Name', 'Count')" />
                                 </div>
                             </div>
 
@@ -76,7 +78,7 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <Rock:RockCheckBox ID="cbQueryParamFiltering" runat="server" Label="Enable Query/Route Parameter Filtering" Text="Yes"
-                                        Help="Enabling this option will allow results to be filtered further by any query string our route parameters that are included. This includes item properties or attributes." />
+                                        Help="Enabling this option will allow results to be filtered further by any query string our route parameters that are included. This includes item properties or attributes. This will disable Cache Tags." />
                                     <Rock:KeyValueList ID="kvlOrder" runat="server" Label="Order Items By" KeyPrompt="Field" ValuePrompt="Direction"
                                         Help="The field value and direction that items should be ordered by." />
                                 </div>
