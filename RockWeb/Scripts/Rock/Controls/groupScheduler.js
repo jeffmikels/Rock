@@ -312,7 +312,7 @@
                     $occurrence.attr('data-total-scheduled', totalScheduled);
 
                     $occurrence.attr('data-empty-spots', belowDesired);
-                    $occurrence.css("--emptySpots", belowDesired);
+                    $occurrence.css("--desiredSpots", desiredCapacity);
 
                     if (minimumCapacity && (totalScheduled < minimumCapacity)) {
                         $occurrence.attr('data-status', 'below-minimum');

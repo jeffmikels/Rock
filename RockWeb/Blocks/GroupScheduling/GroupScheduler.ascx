@@ -1,32 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupScheduler.ascx.cs" Inherits="RockWeb.Blocks.GroupScheduling.GroupScheduler" %>
 
-<style>
-    .panel-toolbar {
-    border-bottom: 1px solid #dbdbdb;
-    padding: 4px 16px;
-    font-size: 12px;
-}
-
-.panel-toolbar .btn,
-.panel-toolbar .picker .picker-label {
-  color: #6f7782;
-  font-size: 12px;
-  font-weight: 600;
-  background: transparent;
-  border: 0;
-  padding: 1px 5px;
-}
-.panel-toolbar .btn:hover,
-.panel-toolbar .btn:active,
-.panel-toolbar .picker .picker-label:hover,
-.panel-toolbar .picker .picker-label:active,
-.open .panel-toolbar .btn {
-  background: #E9ECEE;
-  outline: 0;
-  box-shadow: 0;
-}
-</style>
-
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block styled-scroll panel-groupscheduler">
@@ -38,9 +11,15 @@
                 </h1>
 
                 <div class="panel-labels hidden-xs">
+                    <button id="btnHelp" runat="server"
+                        class="btn btn-link p-0 text-color"
+                        onclick="$('#filter-drawer').slideToggle();return false;">
+                        <i class='fa fa-question'></i>
+                    </button>
+
                     <button id="btnCopyToClipboard" runat="server" disabled="disabled"
                         data-toggle="tooltip" data-placement="top" data-trigger="hover" data-delay="250" title="Copy Report Link to Clipboard"
-                        class="btn btn-link padding-all-none btn-copy-to-clipboard"
+                        class="btn btn-link p-0 btn-copy-to-clipboard text-color"
                         onclick="$(this).attr('data-original-title', 'Copied').tooltip('show').attr('data-original-title', 'Copy Link to Clipboard');return false;">
                         <i class='fa fa-clipboard'></i>
                     </button>
@@ -172,6 +151,45 @@
                         <!-- </div> -->
                         </div>
                     </div>
+
+                    <div id="filter-drawer" class="panel-drawer" style="display: none;">
+                        <div class="clearfix p-3">
+                            <div>
+                            <h5 class="mt-0 mb-4">Group Scheduler Help</h5>
+                            <p><strong>Scheduling Basics</strong></p>
+                            <p>This screen allows you to schedule individuals into groups. Openings are show for each group location schedule to meet the configured minimum number of indivduals. Additional individuals can be added by dropping them into the ‘Add Individual’ zone.</p>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <p><strong>Scheduled Individual Legend</strong></p>
+                                    <p>Scheduled individuals have several states that they can be in. These states are described using an icon to determine how the invite matches their preference. A color descriptions the status of the invite.</p>
+                                    <div class="text-center mb-5"><img src="/Assets/Images/group-scheduler/scheduled-legend.svg"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <p><strong>Unscheduled Individuals Legend</strong></p>
+                                    <p>A person who is not scheduled can also be in various states. Each of these is represented by an icon. Rolling over the individuals will give more details about the state. Yellow indivduals can not be scheduled.</p>
+                                    <div class="text-left mb-5"><img src="/Assets/Images/group-scheduler/unscheduled-legend.svg"></div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Group Location Schedule Status</strong></p>
+                                    <p>At the top of the group location for each schedule is a status bar. This bar displays quite a bit of information for you.</p>
+                                    <p>The green bar represents the individuals who have accepted invites while yellow are those still pending. People who have declined will not be represented on this bar.</p>
+                                    <p>The white line represents the minimum number of individuals you need. The black bar is your desired number.</p>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <p>&nbsp;</p>
+                                    <div class="text-left mb-3"><img src="/Assets/Images/group-scheduler/progress-example.svg"></div>
+                                    <p>So in this case enough people have accepted your invite to meet the minimum. If all remaining invites are accepted you would have enough to meet your desired number.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
             <%-- Panel Body --%>
@@ -227,20 +245,18 @@
 
                                             <div class="js-resource resource unselectable" data-status="unscheduled" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-is-scheduled="" data-person-id="">
                                                 <div class="flex">
-                                                    <span class="resource-name js-resource-name"></span>
-
-                                                    <div class="resource-assignment-preference js-resource-assignment-preference">
-                                                        Todo Preference List
+                                                    <div>
+                                                        <span class="resource-name js-resource-name flex-grow-1"></span>
+                                                        <ul class="resource-assignment-preference js-resource-assignment-preference list-unstyled small text-muted hide-transit">
+                                                            <li>Todo Preference List</li>
+                                                        </ul>
                                                     </div>
 
-                                                    <div class="resource-member-role js-resource-member-role">
+                                                    <span class="resource-member-role js-resource-member-role small text-muted">
                                                         ToDo Member Role
-                                                    </div>
+                                                    </span>
 
-                                                    <div class="resource-meta">
-
-                                                        <div class="js-resource-meta text-right"></div>
-                                                    </div>
+                                                    <div class="resource-meta js-resource-meta text-right"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -276,14 +292,14 @@
                                         <div class="js-resource resource unselectable" data-status="pending" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-attendance-id="" data-person-id="">
 
                                             <div class="flex">
-                                                <span class="resource-name js-resource-name"></span>
+                                                <span class="resource-name js-resource-name flex-grow-1"></span>
                                                 <div class="resource-meta">
 
                                                     <div class="js-resource-meta text-right"></div>
                                                 </div>
                                                 <div class="dropdown js-resource-actions hide-transit">
-                                                    <button class="btn btn-link btn-overflow" type="button" data-toggle="dropdown"><i class="fas fa-ellipsis-h"></i></button>
-                                                    <ul class="dropdown-menu">
+                                                    <button class="btn btn-link btn-overflow" type="button" data-toggle="dropdown"><i class="fa fa-ellipsis-v"></i></button>
+                                                    <ul class="dropdown-menu dropdown-menu-right">
                                                         <li>
                                                             <button type="button" class="dropdown-item btn-link js-markconfirmed">Mark Confirmed</button>
                                                         </li>
