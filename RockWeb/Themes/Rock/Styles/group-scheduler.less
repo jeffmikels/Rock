@@ -62,6 +62,11 @@
   }
 }
 
+.group-schedule-filter-options {
+  background: #F3F3F3;
+  border-right: 1px solid #ddd;
+}
+
 .resource-list {
   position: sticky !important;
   top: 16px;
@@ -113,7 +118,7 @@
 
 .resource {
   display: block;
-  padding: 6px 8px;
+  padding: 16px 12px;
   margin-bottom: 12px;
   font-family: @font-family-sans-serif;
   color: @btn-default-color;
@@ -124,6 +129,7 @@
   border: 1px solid @btn-default-border;
   border-radius: 4px;
   box-shadow: 0 1px 0 hsl(228, 7%, 83%);
+  line-height: 1;
 
   .flex {
     display: -ms-flexbox !important;
@@ -136,12 +142,12 @@
     &::before {
       display: block;
       flex-shrink: 0;
-      width: 24px;
-      height: 24px;
-      margin-right: 7.5px;
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
       content: " ";
       background-color: #fff;
-      border: 1px solid #d8d8d8;
+      // border: 1px solid #d8d8d8;
       border-radius: 50%;
     }
   }
@@ -261,8 +267,6 @@
 }
 
 .panel-groupscheduler .resource-filter-options {
-  margin-left: -15px;
-  margin-bottom: 15px;
   background-color: #f3f3f3;
 }
 
@@ -313,22 +317,24 @@
 
   > .dropzone {
     min-height: 82px;
-    padding: @panel-body-padding;
   }
 }
 
 .scheduler-target-container {
   &:empty {
-    outline: 2px dashed rgba(0, 0, 0, .1);
-
     &::after {
-      content: "Drag and Drop Here";
+      content: "Add Individual";
     }
   }
 
   .resource {
     display: inline-block;
-    margin-right: 8px;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+    border-width: 0;
+    border-bottom-width: 1px;
 
     .resource-meta {
       display: none;
@@ -380,12 +386,14 @@
 /* Location (Attendance Occurrence) */
 .scheduling-status {
   .progress {
+    height: 14px;
     margin-bottom: 0;
+    background: #C4C4C4;
+    box-shadow: none;
   }
 
   .scheduling-status-progress {
-    float: left;
-    width: 100px;
+    width: 100%;
 
     .scheduling-progress-confirmed {
       background-color: @confirmed-icon-color;
@@ -414,32 +422,22 @@
       background-color: darkgreen;
     }
   }
+}
 
-  .scheduling-status-light {
-    float: right;
-    width: 24px;
-    height: 24px;
-    margin-left: 8px;
-    border: 1px solid #d8d8d8;
-    border-radius: 50%;
+.occurrence {
+  &[data-status="below-minimum"] {
+    border-top: 4px solid @belowminimum-icon-color !important;
+  }
 
-    &[data-status="below-minimum"] {
-      background-color: @belowminimum-icon-color;
-    }
+  &[data-status="below-desired"] {
+    border-top: 4px solid  @belowdesired-icon-color !important;
+  }
 
-    &[data-status="below-desired"] {
-      background-color: @belowdesired-icon-color;
-    }
-
-    &[data-status="meets-desired"] {
-      background-color: @meetsdesired-icon-color;
-    }
-
-    &[data-status="none"] {
-      display: none;
-    }
+  &[data-status="meets-desired"] {
+    border-top: 4px solid  @meetsdesired-icon-color !important;
   }
 }
+
 
 /* MP: workaround for https://github.com/bevacqua/dragula/issues/421 */
 .gu-transit .container {
@@ -564,3 +562,156 @@
   box-shadow: 0 5px 20px 0 rgba(21,27,38,.08);
   opacity: 1;
 }
+
+
+// TEMP
+
+.main-content #page-content {
+  min-height: 0;
+}
+.panel-collapsable {
+  box-shadow: 0 1px 3px 0 rgba(21, 27, 38, 0.15);
+}
+.panel-collapsable .panel-drawer {
+  border-bottom: 1px solid #dbdbdb;
+}
+.panel-toolbar {
+  border-bottom: 1px solid #dbdbdb;
+  padding: 4px 16px;
+  font-size: 12px;
+}
+.panel-toolbar .btn {
+  color: #6f7782;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+}
+.panel-toolbar .btn:hover,
+.panel-toolbar .btn:active,
+.open .panel-toolbar .btn {
+  background: #E9ECEE;
+}
+.overflow-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 200px;
+  height: calc(100vh - 290px);
+}
+
+.board-column-container:active,
+.board-column:active {
+    cursor: move;
+    cursor: -moz-grabbing;
+    cursor: -webkit-grabbing;
+    cursor: grabbing;
+}
+
+.board-column {
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  flex: 0 0 312px;
+  height: 100%;
+  max-width: 312px;
+  position: relative;
+  width: 312px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  padding-top: 5px;
+  transition: box-shadow 250ms;
+  overflow: hidden;
+}
+.board-heading {
+  padding: 0 16px;
+}
+.board-heading-pill {
+  height: 4px;
+  border-radius: 2px;
+}
+.board-cards {
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1px 16px 64px;
+}
+.board-card {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: box-shadow 100ms, transform 100ms, background-color 100ms, border-color 100ms;
+  width: 280px;
+  cursor: pointer;
+  display: block;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+.board-card:hover {
+  box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.1);
+}
+.board-card-photo {
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  background: center/cover #cbd4db;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.07);
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  display: inline-flex;
+  justify-content: center;
+  position: relative;
+  vertical-align: top;
+}
+.board-card-assigned {
+  font-size: 12px;
+}
+.board-card-pills {
+  align-content: space-between;
+  display: flex;
+  flex-flow: row wrap;
+  margin: -5px -5px 0;
+  margin-bottom: 10px;
+}
+.board-card-pill {
+  border-radius: 3px;
+  height: 6px;
+  margin: 5px 5px 0;
+  width: 42px;
+  background-color: #7a6ff0;
+}
+.board-card-meta {
+  font-size: 11px;
+}
+.dropdown-menu-mega {
+  width: 300px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2000;
+  overflow-y: scroll;
+}
+.dropdown-menu-mega li {
+  position: relative;
+}
+.dropdown-menu-mega .dropdown-header {
+  margin: 24px 16px 4px;
+  padding: 8px 0;
+  font-size: 16px;
+  color: #484848;
+  border-bottom: 1px solid #E4E4E4;
+  font-weight: 700;
+}
+.dropdown-menu-mega .dropdown-header:first-child {
+  margin-top: 0;
+}
+
+  .styled-scroll ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .styled-scroll ::-webkit-scrollbar-thumb {
+    width: 8px;
+    width: 8px;
+  }

@@ -51,7 +51,7 @@ namespace RockWeb.Blocks.GroupScheduling
     public partial class GroupScheduler : RockBlock
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected class AttributeKey
         {
@@ -64,7 +64,7 @@ namespace RockWeb.Blocks.GroupScheduling
         #region PageParameterKeys
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private static class PageParameterKey
         {
@@ -1104,7 +1104,7 @@ btnCopyToClipboard.ClientID );
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private class CapacityInfo
         {
@@ -1134,7 +1134,7 @@ btnCopyToClipboard.ClientID );
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public enum OccurrenceDisplayMode
         {
@@ -1302,6 +1302,7 @@ btnCopyToClipboard.ClientID );
             pnlMultiGroupModeColumnHeading.Visible = occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
             pnlSingleGroupModeColumnHeading.Visible = occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.ScheduleOccurrenceDate;
             var columnCssClasses = new List<string>();
+            columnCssClasses.Add( "board-column" );
             columnCssClasses.Add( "occurrence-column" );
 
             if ( occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup )
@@ -1379,11 +1380,6 @@ btnCopyToClipboard.ClientID );
             // hide the status labels if is the one that doesn't have a Location assigned
             pnlStatusLabels.Visible = hasLocation;
 
-            var hfAttendanceOccurrenceId = e.Item.FindControl( "hfAttendanceOccurrenceId" ) as HiddenField;
-            var hfAttendanceOccurrenceDate = e.Item.FindControl( "hfAttendanceOccurrenceDate" ) as HiddenField;
-            var hfLocationScheduleMinimumCapacity = e.Item.FindControl( "hfLocationScheduleMinimumCapacity" ) as HiddenField;
-            var hfLocationScheduleDesiredCapacity = e.Item.FindControl( "hfLocationScheduleDesiredCapacity" ) as HiddenField;
-            var hfLocationScheduleMaximumCapacity = e.Item.FindControl( "hfLocationScheduleMaximumCapacity" ) as HiddenField;
 
             var pnlMultiGroupModePanelHeading = e.Item.FindControl( "pnlMultiGroupModePanelHeading" ) as Panel;
             var lMultiGroupModeLocationTitle = e.Item.FindControl( "lMultiGroupModeLocationTitle" ) as Literal;
@@ -1398,7 +1394,7 @@ btnCopyToClipboard.ClientID );
 
                 // show time in '10:30 AM' format
                 lMultiGroupModeOccurrenceScheduledTime.Text = attendanceOccurrenceRowItem.ScheduledDateTime.Value.ToString( "h:mm tt" );
-                hfAttendanceOccurrenceDate.Value = attendanceOccurrenceRowItem.ScheduledDateTime.Value.Date.ToISO8601DateString();
+                pnlScheduledOccurrence.Attributes["data-attendanceoccurrence-date"] = attendanceOccurrenceRowItem.ScheduledDateTime.Value.Date.ToISO8601DateString();
             }
 
             var pnlSingleGroupModePanelHeading = e.Item.FindControl( "pnlSingleGroupModePanelHeading" ) as Panel;
@@ -1416,13 +1412,13 @@ btnCopyToClipboard.ClientID );
                 pnlSingleGroupModePanelHeading.Visible = true;
             }
 
-            hfAttendanceOccurrenceId.Value = attendanceOccurrenceId.ToString();
+            pnlScheduledOccurrence.Attributes["data-attendanceoccurrence-id"] = attendanceOccurrenceId.ToString();
 
             if ( attendanceOccurrenceRowItem.CapacityInfo != null )
             {
-                hfLocationScheduleMinimumCapacity.Value = attendanceOccurrenceRowItem.CapacityInfo.MinimumCapacity.ToString();
-                hfLocationScheduleDesiredCapacity.Value = attendanceOccurrenceRowItem.CapacityInfo.DesiredCapacity.ToString();
-                hfLocationScheduleMaximumCapacity.Value = attendanceOccurrenceRowItem.CapacityInfo.MaximumCapacity.ToString();
+                pnlScheduledOccurrence.Attributes["data-minimum-capacity"] = attendanceOccurrenceRowItem.CapacityInfo.MinimumCapacity.ToString();
+                pnlScheduledOccurrence.Attributes["data-desired-capacity"] = attendanceOccurrenceRowItem.CapacityInfo.DesiredCapacity.ToString();
+                pnlScheduledOccurrence.Attributes["data-maximum-capacity"] = attendanceOccurrenceRowItem.CapacityInfo.MaximumCapacity.ToString();
             }
         }
 
@@ -1736,7 +1732,7 @@ btnCopyToClipboard.ClientID );
         protected void rptWeekSelector_ItemDataBound( object sender, RepeaterItemEventArgs e )
         {
             var sundayDate = ( DateTime ) e.Item.DataItem;
-            string weekTitle = string.Format( "Week of {0} to {1}", sundayDate.AddDays( -6 ).ToShortDateString(), sundayDate.ToShortDateString() );
+            string weekTitle = string.Format( "{0} to {1}", sundayDate.AddDays( -6 ).ToShortDateString(), sundayDate.ToShortDateString() );
 
             var btnSelectWeek = e.Item.FindControl( "btnSelectWeek" ) as LinkButton;
             btnSelectWeek.Text = weekTitle;
@@ -1873,6 +1869,6 @@ btnCopyToClipboard.ClientID );
 
         #endregion Events
 
-        
+
     }
 }
