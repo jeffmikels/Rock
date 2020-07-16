@@ -125,7 +125,7 @@
   cursor: move;
   cursor: -webkit-grab;
   cursor: grab;
-  background-color: @btn-default-bg;
+  // background-color: @btn-default-bg;
   border: 1px solid @btn-default-border;
   border-radius: 4px;
   box-shadow: 0 1px 0 hsl(228, 7%, 83%);
@@ -280,8 +280,6 @@
 .dropzone {
   &:empty {
     position: relative;
-    padding: 40px 0;
-    outline-offset: -2px;
 
     &::after {
       position: absolute;
@@ -315,15 +313,27 @@
 .location .panel-body {
   padding: 0;
 
-  > .dropzone {
-    min-height: 82px;
-  }
+  // > .dropzone {
+  //   min-height: 82px;
+  // }
 }
 
 .scheduler-target-container {
+  @grid-height: 51px;
+  @border-start: @grid-height - 1px;
+  @border-end: @grid-height + 1px;
+  min-height: ~"calc("@grid-height~"*var(--emptySpots,2))"; //var(--emptySpots)
+  background-size: @grid-height @grid-height;
+  background-position: 0 -1px;
+  background-image: -webkit-linear-gradient(0deg, transparent @border-start, @panel-default-border @border-start, @panel-default-border @border-end, transparent @border-end);
+  background-image: -moz-linear-gradient(0deg, transparent @border-start, @panel-default-border @border-start, @panel-default-border @border-end, transparent @border-end);
+  background-image: -ms-linear-gradient(0deg, transparent @border-start, @panel-default-border @border-start, @panel-default-border @border-end, transparent @border-end);
+  background-image: -o-linear-gradient(0deg, transparent @border-start, @panel-default-border @border-start, @panel-default-border @border-end, transparent @border-end);
+  background-image: linear-gradient(0deg, transparent @border-start, @panel-default-border @border-start, @panel-default-border @border-end, transparent @border-end);
+
   &:empty {
     &::after {
-      content: "Add Individual";
+      content: "";
     }
   }
 

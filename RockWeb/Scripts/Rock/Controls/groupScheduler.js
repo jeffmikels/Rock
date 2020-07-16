@@ -148,7 +148,7 @@
                             var $scheduledResource = $(el);
 
                             var personId = $scheduledResource.attr('data-person-id');
-                            var attendanceOccurrenceId = $(target).closest('.js-scheduled-occurrence').find('.js-attendanceoccurrence-id').val();
+                            var attendanceOccurrenceId = $(target).closest('.js-scheduled-occurrence').data('attendanceoccurrence-id');
                             var $occurrence = $(el).closest('.js-scheduled-occurrence');
                             var scheduledPersonAddUrl = scheduledPersonAddPendingUrl;
 
@@ -246,15 +246,15 @@
             /** populates the scheduled (requested/scheduled) resources for the occurrence div */
             populateScheduledOccurrence: function ($occurrence) {
                 var getScheduledUrl = Rock.settings.get('baseUrl') + 'api/Attendances/GetAttendingSchedulerResources';
-                var attendanceOccurrenceId = $occurrence.find('.js-attendanceoccurrence-id').val();
+                var attendanceOccurrenceId = $occurrence.data('attendanceoccurrence-id');
                 var $schedulerTargetContainer = $occurrence.find('.js-scheduler-target-container');
 
-                var minimumCapacity = $occurrence.find('.js-minimum-capacity').val();
-                var desiredCapacity = $occurrence.find('.js-desired-capacity').val();
-                var maximumCapacity = $occurrence.find('.js-maximum-capacity').val();
+                var minimumCapacity = $occurrence.data('minimum-capacity');
+                var desiredCapacity = $occurrence.data('desired-capacity');
+                var maximumCapacity = $occurrence.data('maximum-capacity');
                 var $schedulingStatusContainer = $occurrence.find('.js-scheduling-status');
                 var $autoschedulerWarning = $occurrence.find('.js-autoscheduler-warning');
-                var occurrenceDate = new Date($occurrence.find('.js-attendanceoccurrence-date').val()).getTime();
+                var occurrenceDate = new Date($occurrence.data('attendanceoccurrence-date')).getTime();
                 var hasLocation = $occurrence.data('has-location')
 
                 if (!desiredCapacity) {
@@ -307,27 +307,29 @@
 
                     schedulerTargetContainerParent.append($schedulerTargetContainer);
 
-                    var $statusLight = $schedulingStatusContainer.find('.js-scheduling-status-light');
+                    var totalScheduled = totalConfirmed + totalPending;
+                    var belowDesired = Math.max(0,(desiredCapacity - totalScheduled));
+                    $occurrence.attr('data-total-scheduled', totalScheduled);
 
-                    var totalPendingOrConfirmed = totalConfirmed + totalPending;
+                    $occurrence.attr('data-empty-spots', belowDesired);
+                    $occurrence.css("--emptySpots", belowDesired);
 
-                    if (minimumCapacity && (totalPendingOrConfirmed < minimumCapacity)) {
-                        $statusLight.attr('data-status', 'below-minimum');
+                    if (minimumCapacity && (totalScheduled < minimumCapacity)) {
+                        $occurrence.attr('data-status', 'below-minimum');
                     }
-                    else if (desiredCapacity && (totalPendingOrConfirmed < desiredCapacity)) {
-                        $statusLight.attr('data-status', 'below-desired');
+                    else if (desiredCapacity && (totalScheduled < desiredCapacity)) {
+                        $occurrence.attr('data-status', 'below-desired');
                     }
-                    else if (desiredCapacity && (totalPendingOrConfirmed >= desiredCapacity)) {
-                        $statusLight.attr('data-status', 'meets-desired');
+                    else if (desiredCapacity && (totalScheduled >= desiredCapacity)) {
+                        $occurrence.attr('data-status', 'meets-desired');
                     }
                     else {
                         // no capacities defined, so just hide it
-                        $statusLight.attr('data-status', 'none');
+                        $occurrence.attr('data-status', 'none');
                     }
 
                     // set the progressbar max range to desired capacity if known
                     var progressMax = desiredCapacity;
-                    var totalScheduled = (totalPending + totalConfirmed);
                     if (!progressMax) {
                         // desired capacity isn't known, so just have it act as a stacked bar based on the sum of pending,confirmed,declined
                         progressMax = totalScheduled;
