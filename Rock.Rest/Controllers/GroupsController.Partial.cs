@@ -316,7 +316,7 @@ namespace Rock.Rest.Controllers
 
                     foreach ( var schedule in location.Schedules )
                     {
-                        var scheduleDetails = ScheduleICalHelper.GetCalendarEvent( schedule.IcalContent );
+                        var scheduleDetails = InetCalendarHelper.GetCalendarEvent( schedule.IcalContent );
 
                         if ( scheduleDetails.RecurrenceRules.Count == 0 )
                         {
@@ -325,7 +325,7 @@ namespace Rock.Rest.Controllers
 
                         schedule.DayOfWeek = scheduleDetails.RecurrenceRules[0].ByDay.FirstOrDefault()?.DayOfWeek;
 
-                        schedule.StartTime = scheduleDetails.DTStart.Value.TimeOfDay;
+                        schedule.StartTime = scheduleDetails.DtStart.Value.TimeOfDay;
 
                         var duration = scheduleDetails.Duration;
 
