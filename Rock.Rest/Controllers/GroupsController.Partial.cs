@@ -67,9 +67,9 @@ namespace Rock.Rest.Controllers
             TreeViewItem.GetCountsType countsType = TreeViewItem.GetCountsType.None,
             int campusId = 0,
             bool includeNoCampus = false,
-            bool limitToPublic  = false,
+            bool limitToPublic = false,
             bool limitToSchedulingEnabled = false,
-            bool limitToRSVPEnabled = false)
+            bool limitToRSVPEnabled = false )
         {
             // Enable proxy creation since security is being checked and need to navigate parent authorities
             SetProxyCreation( true );
@@ -77,7 +77,7 @@ namespace Rock.Rest.Controllers
             var includedGroupTypeIdList = includedGroupTypeIds.SplitDelimitedValues().AsIntegerList().Except( new List<int> { 0 } ).ToList();
             var excludedGroupTypeIdList = excludedGroupTypeIds.SplitDelimitedValues().AsIntegerList().Except( new List<int> { 0 } ).ToList();
 
-            var groupService = (GroupService)Service;
+            var groupService = ( GroupService ) Service;
 
             // if specific group types are specified, show the groups regardless of ShowInNavigation
             bool limitToShowInNavigation = !includedGroupTypeIdList.Any();
@@ -101,7 +101,7 @@ namespace Rock.Rest.Controllers
                 groupIdsWithSchedulingEnabledWithAncestors = groupService.GetGroupIdsWithSchedulingEnabledWithAncestors();
             }
 
-            foreach ( var group in qry.OrderBy( g => g.Order ).ThenBy( g => g.Name ) )
+            foreach ( var group in qry.ToList().OrderBy( g => g.Order ).ThenBy( g => g.Name ) )
             {
                 // we already have the ParentGroup record, so lets set it for each group to avoid a database round-trip during Auth
                 group.ParentGroup = parentGroup;
@@ -111,7 +111,7 @@ namespace Rock.Rest.Controllers
                     var groupType = GroupTypeCache.Get( group.GroupTypeId );
 
                     bool includeGroup_Scheduling = true;
-                    if ( limitToSchedulingEnabled  )
+                    if ( limitToSchedulingEnabled )
                     {
                         includeGroup_Scheduling = false;
                         if ( groupType?.IsSchedulingEnabled == true )
@@ -144,7 +144,7 @@ namespace Rock.Rest.Controllers
                             This should help avoid any performance issues
                             */
 
-                            if ( groupIdsWithSchedulingEnabledWithAncestors != null)
+                            if ( groupIdsWithSchedulingEnabledWithAncestors != null )
                             {
                                 bool hasChildScheduledEnabledGroups = groupIdsWithSchedulingEnabledWithAncestors.Contains( group.Id );
                                 if ( hasChildScheduledEnabledGroups )
@@ -240,7 +240,7 @@ namespace Rock.Rest.Controllers
         [System.Web.Http.Route( "api/Groups/GetFamilies/{personId}" )]
         public IQueryable<Group> GetFamilies( int personId )
         {
-            return new PersonService( (RockContext)Service.Context ).GetFamilies( personId );
+            return new PersonService( ( RockContext ) Service.Context ).GetFamilies( personId );
         }
 
 
@@ -300,7 +300,7 @@ namespace Rock.Rest.Controllers
                 .ToList();
 
             // The returned type is great but lets add some schedule details from the ical string
-            foreach (var groupCheckinInfo in groups)
+            foreach ( var groupCheckinInfo in groups )
             {
                 if ( groupCheckinInfo.Locations.IsNull() )
                 {
@@ -339,7 +339,7 @@ namespace Rock.Rest.Controllers
                 }
             }
 
-            return this.Request.CreateResponse( groups ); 
+            return this.Request.CreateResponse( groups );
         }
 
         /// <summary>
@@ -383,21 +383,21 @@ namespace Rock.Rest.Controllers
             {
                 var families = personService.GetFamilies( person.Id )
                                     .Select( f => new FamilySearchResult
-                                                        {
-                                                            Id = f.Id,
-                                                            Name = f.Name,
-                                                            FamilyMembers = f.Members.ToList(),
-                                                            HomeLocation = f.GroupLocations
+                                    {
+                                        Id = f.Id,
+                                        Name = f.Name,
+                                        FamilyMembers = f.Members.ToList(),
+                                        HomeLocation = f.GroupLocations
                                                                             .Where( l => l.GroupLocationTypeValue.Guid == homeAddressGuid )
                                                                             .OrderByDescending( l => l.IsMailingLocation )
                                                                             .Select( l => l.Location )
                                                                             .FirstOrDefault(),
-                                                            MainPhone = f.Members
+                                        MainPhone = f.Members
                                                                             .OrderBy( m => m.GroupRole.Order )
                                                                             .ThenBy( m => m.Person.Gender )
                                                                             .FirstOrDefault()
                                                                             .Person.PhoneNumbers.OrderBy( p => p.NumberTypeValue.Order ).FirstOrDefault()
-                                                        } )
+                                    } )
                                                         .ToList();
 
                 foreach ( var family in families )
@@ -425,21 +425,21 @@ namespace Rock.Rest.Controllers
             return new GroupService( rockContext ).Queryable().AsNoTracking()
                                                     .Where( g => g.Id == familyId )
                                                     .Select( f => new FamilySearchResult
-                                                        {
-                                                            Id = f.Id,
-                                                            Name = f.Name,
-                                                            FamilyMembers = f.Members.ToList(),
-                                                            HomeLocation = f.GroupLocations
+                                                    {
+                                                        Id = f.Id,
+                                                        Name = f.Name,
+                                                        FamilyMembers = f.Members.ToList(),
+                                                        HomeLocation = f.GroupLocations
                                                                             .Where( l => l.GroupLocationTypeValue.Guid == homeAddressGuid )
                                                                             .OrderByDescending( l => l.IsMailingLocation )
                                                                             .Select( l => l.Location )
                                                                             .FirstOrDefault(),
-                                                            MainPhone = f.Members
+                                                        MainPhone = f.Members
                                                                             .OrderBy( m => m.GroupRole.Order )
                                                                             .ThenBy( m => m.Person.Gender )
                                                                             .FirstOrDefault()
                                                                             .Person.PhoneNumbers.OrderBy( p => p.NumberTypeValue.Order ).FirstOrDefault()
-                                                        } ).FirstOrDefault();
+                                                    } ).FirstOrDefault();
         }
 
         /// <summary>
@@ -533,7 +533,7 @@ namespace Rock.Rest.Controllers
         public IQueryable GetByLocation( int groupTypeId, int locationId, bool? sortByDistance = true, double? maxDistanceMiles = null, int? geofenceGroupTypeId = null, System.Web.Http.OData.Query.ODataQueryOptions<Group> queryOptions = null )
         {
             // Get the location record
-            var rockContext = (RockContext)Service.Context;
+            var rockContext = ( RockContext ) Service.Context;
             var specifiedLocation = new LocationService( rockContext ).Get( locationId );
 
             // If location was valid and address was geocoded successfully
@@ -578,7 +578,7 @@ namespace Rock.Rest.Controllers
         /// <returns></returns>
         private IQueryable GetByGeoPoint( int groupTypeId, DbGeography geoPoint, bool? sortByDistance, double? maxDistanceMiles, int? geofenceGroupTypeId, System.Web.Http.OData.Query.ODataQueryOptions<Group> queryOptions )
         {
-            var rockContext = (RockContext)Service.Context;
+            var rockContext = ( RockContext ) Service.Context;
             IEnumerable<Group> resultGroups = new List<Group>();
 
             if ( geoPoint != null )
@@ -697,7 +697,7 @@ namespace Rock.Rest.Controllers
         {
             SetProxyCreation( true );
 
-            var rockContext = (RockContext)Service.Context;
+            var rockContext = ( RockContext ) Service.Context;
             var group = new GroupService( rockContext ).Get( groupId );
 
             var locationType = DefinedValueCache.Get( locationTypeId );
@@ -727,7 +727,7 @@ namespace Rock.Rest.Controllers
             // Enable proxy creation since security is being checked and need to navigate parent authorities
             SetProxyCreation( true );
 
-            var group = ( (GroupService)Service ).Queryable( "GroupLocations.Location" )
+            var group = ( ( GroupService ) Service ).Queryable( "GroupLocations.Location" )
                 .Where( g => g.Id == groupId )
                 .FirstOrDefault();
 
@@ -783,7 +783,7 @@ namespace Rock.Rest.Controllers
             // Enable proxy creation since security is being checked and need to navigate parent authorities
             SetProxyCreation( true );
 
-            var groupService = (GroupService)Service;
+            var groupService = ( GroupService ) Service;
             var groupLocationService = new GroupLocationService( groupService.Context as RockContext );
             List<Group> childGroups;
 
@@ -796,7 +796,7 @@ namespace Rock.Rest.Controllers
                 childGroups = groupService.GetAllDescendentGroups( groupId, false ).ToList();
             }
 
-            if ( !string.IsNullOrWhiteSpace( groupTypeIds ) ) 
+            if ( !string.IsNullOrWhiteSpace( groupTypeIds ) )
             {
                 var groupTypeIdList = groupTypeIds.Split( ',' ).AsIntegerList();
                 if ( groupTypeIdList.Any() )
@@ -851,7 +851,7 @@ namespace Rock.Rest.Controllers
             // Enable proxy creation since security is being checked and need to navigate parent authorities
             SetProxyCreation( true );
 
-            var group = ( (GroupService)Service ).Queryable( "Members" )
+            var group = ( ( GroupService ) Service ).Queryable( "Members" )
                 .Where( g => g.Id == groupId )
                 .FirstOrDefault();
 
@@ -868,11 +868,11 @@ namespace Rock.Rest.Controllers
 
                     if ( groupMemberStatus.HasValue )
                     {
-                        members = members.Where(a=>a.GroupMemberStatus == groupMemberStatus.Value).ToList();
+                        members = members.Where( a => a.GroupMemberStatus == groupMemberStatus.Value ).ToList();
                     }
 
                     var memberIds = members.Select( m => m.PersonId ).Distinct().ToList();
-                    var families = ( (GroupService)Service ).Queryable( "GroupLocations.Location" )
+                    var families = ( ( GroupService ) Service ).Queryable( "GroupLocations.Location" )
                         .Where( g =>
                             g.GroupType.Guid == familyGuid &&
                             g.Members.Any( m => memberIds.Contains( m.PersonId ) ) )
@@ -933,12 +933,12 @@ namespace Rock.Rest.Controllers
         /// <exception cref="System.Web.Http.HttpResponseException"></exception>
         [Authenticate, Secured]
         [System.Web.Http.Route( "api/Groups/GetMapInfo/{groupId}/Families/{statusId}" )]
-        public IQueryable<MapItem> GetFamiliesMapInfo( int groupId, int statusId, string campusIds)
+        public IQueryable<MapItem> GetFamiliesMapInfo( int groupId, int statusId, string campusIds )
         {
             // Enable proxy creation since security is being checked and need to navigate parent authorities
             SetProxyCreation( true );
 
-            var group = ( (GroupService)Service ).Queryable( "GroupLocations.Location" )
+            var group = ( ( GroupService ) Service ).Queryable( "GroupLocations.Location" )
                 .Where( g => g.Id == groupId )
                 .FirstOrDefault();
 
@@ -956,8 +956,8 @@ namespace Rock.Rest.Controllers
                     {
                         var familyGroupTypeId = GroupTypeCache.GetFamilyGroupType().Id;
                         var recordStatusActiveId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_ACTIVE.AsGuid() ).Id;
-                        
-                        var families = new GroupLocationService( (RockContext)Service.Context ).Queryable()
+
+                        var families = new GroupLocationService( ( RockContext ) Service.Context ).Queryable()
                             .Where( l =>
                                 l.IsMappedLocation &&
                                 l.Group.GroupTypeId == familyGroupTypeId &&

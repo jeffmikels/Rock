@@ -458,6 +458,25 @@
                 $resourceDiv.attr('data-has-requirements-conflict', schedulerResource.HasGroupRequirementsConflict);
                 var $resourceMeta = $resourceDiv.find('.js-resource-meta');
 
+                if (schedulerResource.GroupRole) {
+                    var $resourceMemberRole = $resourceDiv.find('.js-resource-member-role');
+                    $resourceMemberRole.append('<span>' + schedulerResource.GroupRole.Name + '</span>');
+                }
+
+                if (schedulerResource.ResourceAssignments) {
+                    var $resourceAssignmentPreference = $resourceDiv.find('.js-resource-assignment-preference');
+                    for (var i = 0; i < schedulerResource.ResourceAssignments.length; i++) {
+                        var resourceAssignment = schedulerResource.ResourceAssignments[i];
+                        $resourceAssignmentPreference.append('<div class="resource-assignment">'
+                            + '<span class="resource-assignment-schedule">'
+                            + resourceAssignment.ScheduleName
+                            + '</span>' + '<span class="resource-assignment-location">'
+                            + resourceAssignment.LocationName
+                            + '</span>'
+                            + '</div>');
+                    }
+                }
+
                 if (schedulerResource.HasBlackoutConflict) {
                     $resourceDiv.attr('title', schedulerResource.PersonName + " cannot be scheduled due to a blackout.");
                     $resourceDiv.tooltip();

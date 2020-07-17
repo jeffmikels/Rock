@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Web.UI;
@@ -91,7 +90,7 @@ namespace RockWeb.Blocks.GroupScheduling
             public const string SelectedGroupId = "SelectedGroupId";
 
             // the GroupIds that are selected in the GroupPicker
-            public const string PickedGroupIds = "PickedGroupIds";
+            public const string PickerGroupIds = "PickerGroupIds";
 
             // the value of the ShowChildGroups checkbox
             public const string ShowChildGroups = "ShowChildGroups";
@@ -360,34 +359,22 @@ btnCopyToClipboard.ClientID );
 
             // if there is a 'GroupIds' parameter/userpreference, that defines what groups are shown.
             // However, only one group can be selected/active at a time
-            List<int> pickedGroupIds =
-                ( GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupIds, UserPreferenceKey.PickedGroupIds ) ?? string.Empty ).Split( ',' ).AsIntegerList();
+            List<int> pickerGroupIds =
+                ( GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupIds, UserPreferenceKey.PickerGroupIds ) ?? string.Empty ).Split( ',' ).AsIntegerList();
+
+            gpPickedGroups.SetValues( pickerGroupIds );
 
             // if there is a 'GroupId' parameter that will define active/selected group
             int? selectedGroupId = GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupId, UserPreferenceKey.SelectedGroupId ).AsIntegerOrNull();
 
-            if ( !selectedGroupId.HasValue && pickedGroupIds.Any() )
-            {
-                // if there isn't a specific group specified, default to the first one that has scheduling enabled
-                int firstScheduleEnabledGroupId = GetSchedulingEnabledGroupIds( pickedGroupIds ).FirstOrDefault();
-
-                selectedGroupId = firstScheduleEnabledGroupId;
-            }
-
             if ( selectedGroupId.HasValue )
             {
-                // if there is a GroupId specified, but it isn't in the listed groups, add it to the list
-                if ( !pickedGroupIds.Contains( selectedGroupId.Value ) )
-                {
-                    pickedGroupIds.Add( selectedGroupId.Value );
-                }
+                // make sure a valid group was specified
+                selectedGroupId = new GroupService( new RockContext() ).GetSelect( selectedGroupId.Value, s => ( int? ) s.Id );
             }
 
             bool showChildGroups = GetUrlSettingOrBlockUserPreference( PageParameterKey.ShowChildGroups, UserPreferenceKey.ShowChildGroups ).AsBooleanOrNull() ?? false;
-
-            gpPickedGroups.SetValues( pickedGroupIds );
             SetStateForShowChildGroupsButton( showChildGroups );
-
 
             if ( this.PageParameter( PageParameterKey.GroupIds ).IsNotNullOrWhiteSpace() )
             {
@@ -447,14 +434,14 @@ btnCopyToClipboard.ClientID );
         /// </summary>
         /// <param name="authorizedGroupIds">The authorized group ids.</param>
         /// <returns></returns>
-        private static int[] GetSchedulingEnabledGroupIds( List<int> authorizedGroupIds )
+        private static List<int> GetSchedulingEnabledGroupIds( List<int> authorizedGroupIds )
         {
             var schedulingEnabledGroupIds =
              new GroupService( new RockContext() )
                 .GetByIds( authorizedGroupIds )
                 .Where( a => a.GroupType.IsSchedulingEnabled && !a.DisableScheduling )
                 .Select( a => a.Id )
-                .ToArray();
+                .ToList();
 
             return schedulingEnabledGroupIds;
         }
@@ -498,7 +485,7 @@ btnCopyToClipboard.ClientID );
             lWeekFilterText.Text = string.Format( "<i class='fa fa-calendar-alt'></i> Week: {0}", sundayDate.ToShortDateString() );
 
             this.SetBlockUserPreference( UserPreferenceKey.SelectedGroupId, selectedGroupId.ToString(), false );
-            this.SetBlockUserPreference( UserPreferenceKey.PickedGroupIds, gpPickedGroups.SelectedIds.ToList().AsDelimited( "," ), false );
+            this.SetBlockUserPreference( UserPreferenceKey.PickerGroupIds, gpPickedGroups.SelectedIds.ToList().AsDelimited( "," ), false );
             this.SetBlockUserPreference( UserPreferenceKey.ShowChildGroups, btnShowChildGroups.Attributes["show-child-groups"], false );
 
             this.SetBlockUserPreference( UserPreferenceKey.SelectedDate, sundayDate.ToISO8601DateString(), false );
@@ -511,6 +498,13 @@ btnCopyToClipboard.ClientID );
             this.SaveBlockUserPreferences();
 
             var rockContext = new RockContext();
+
+            // only show the Show Child Groups option if
+            // the is only one group selected, and that group has child ground
+            var pickerGroupIds = gpPickedGroups.SelectedIds.ToList();
+
+            bool showChildGroupsCheckbox = pickerGroupIds.Count == 1 && new GroupService( rockContext ).Queryable().Where( a => a.ParentGroupId.HasValue && pickerGroupIds.Contains( a.ParentGroupId.Value ) ).Any();
+            btnShowChildGroups.Visible = showChildGroupsCheckbox;
 
             Schedule selectedSchedule = null;
             if ( selectedScheduleId.HasValue )
@@ -724,8 +718,22 @@ btnCopyToClipboard.ClientID );
                 filterMessage = "Please select as least one group";
                 filterNotificationBoxType = NotificationBoxType.Info;
             }
+            else if ( !scheduleIds.Any() )
+            {
+                // check schedules (before locations) since you can't have locations if there aren't any schedule
+                if ( hasMultipleGroupsSelected )
+                {
+                    filterMessage = "The selected groups do not have any schedules";
+                }
+                else
+                {
+                    filterMessage = "The selected group does not have any schedules";
+                }
+            }
             else if ( !listedLocations.Any() )
             {
+
+                // if there are schedules, but no locations, warn about lack of schedules
                 if ( hasMultipleGroupsSelected )
                 {
                     filterMessage = "The selected groups do not have any locations";
@@ -739,17 +747,6 @@ btnCopyToClipboard.ClientID );
             {
                 filterMessage = "Please select as least one location";
                 filterNotificationBoxType = NotificationBoxType.Info;
-            }
-            else if ( !scheduleIds.Any() )
-            {
-                if ( hasMultipleGroupsSelected )
-                {
-                    filterMessage = "The selected groups do not have any schedules";
-                }
-                else
-                {
-                    filterMessage = "The selected group does not have any schedules";
-                }
             }
             else
             {
@@ -923,9 +920,9 @@ btnCopyToClipboard.ClientID );
 
             var scheduleIds = GetSelectedScheduleIds( authorizedListedGroups );
 
-            var rockContext = new RockContext();
 
-            var occurrenceSchedules = new ScheduleService( rockContext ).GetByIds( scheduleIds ).AsNoTracking().ToList();
+
+            var occurrenceSchedules = new ScheduleService( new RockContext() ).GetByIds( scheduleIds ).AsNoTracking().ToList();
 
             if ( !occurrenceSchedules.Any() )
             {
@@ -934,17 +931,7 @@ btnCopyToClipboard.ClientID );
             }
 
             btnAutoSchedule.Visible = true;
-
-            var attendanceOccurrenceService = new AttendanceOccurrenceService( rockContext );
-            var selectedLocationIds = hfSelectedLocationIds.Value.Split( ',' ).AsIntegerList();
-
-            var groupIds = authorizedListedGroups.Select( a => a.Id ).ToList();
-
-            var selectedGroupLocationIds = new GroupLocationService( rockContext ).Queryable()
-                .Where( a => groupIds.Contains( a.GroupId ) && selectedLocationIds.Contains( a.LocationId ) )
-                .Select( a => a.Id ).ToList();
-
-            List<DateTime> occurrenceDatesForAllSchedules = new List<DateTime>();
+            var scheduleOccurrenceDatesLookupByScheduleId = new Dictionary<int, List<DateTime>>();
 
             foreach ( var occurrenceSchedule in occurrenceSchedules )
             {
@@ -957,16 +944,69 @@ btnCopyToClipboard.ClientID );
                     .Distinct()
                     .ToList();
 
-                List<AttendanceOccurrence> missingAttendanceOccurrenceListForSchedule =
-                    attendanceOccurrenceService.CreateMissingAttendanceOccurrences( scheduleOccurrenceDates, occurrenceSchedule.Id, selectedGroupLocationIds );
+                scheduleOccurrenceDatesLookupByScheduleId.Add( occurrenceSchedule.Id, scheduleOccurrenceDates );
+            }
 
-                attendanceOccurrenceService.AddRange( missingAttendanceOccurrenceListForSchedule );
-                rockContext.SaveChanges();
+            var selectedLocationIds = hfSelectedLocationIds.Value.Split( ',' ).AsIntegerList();
 
-                occurrenceDatesForAllSchedules.AddRange( scheduleOccurrenceDates );
+            var groupIds = authorizedListedGroups.Select( a => a.Id ).ToList();
+
+            List<DateTime> occurrenceDatesForAllSchedules = new List<DateTime>();
+
+            // create a lookup of GroupLocations for each GroupId
+            // only include GroupLocations that have Schedules (since we can't schedule somebody for a group location that doesn't have any schedules)
+            var groupGroupLocationIdsLookupByGroupId = new GroupLocationService( new RockContext() ).Queryable()
+                    .Where( a =>
+                        groupIds.Contains( a.GroupId )
+                        && selectedLocationIds.Contains( a.LocationId )
+                        && a.Schedules.Any()
+                        )
+                    .Select( a => new { a.GroupId, GroupLocationId = a.Id } )
+                    .ToList()
+                    .GroupBy( a => a.GroupId )
+                    .ToDictionary( k => k.Key, v => v.Select( s => s.GroupLocationId ).ToList() );
+
+            List<int> selectedGroupLocationIds = new List<int>();
+
+            foreach ( var groupId in groupIds )
+            {
+                using ( var missingAttendanceOccurrenceRockContext = new RockContext() )
+                {
+                    var missingAttendanceOccurrenceOccurrenceService = new AttendanceOccurrenceService( missingAttendanceOccurrenceRockContext );
+                    var groupGroupLocationIds = groupGroupLocationIdsLookupByGroupId.GetValueOrNull( groupId ) ?? new List<int>();
+
+                    if ( !groupGroupLocationIds.Any() )
+                    {
+                        continue;
+                    }
+
+                    selectedGroupLocationIds.AddRange( groupGroupLocationIds );
+
+                    foreach ( var occurrenceSchedule in occurrenceSchedules )
+                    {
+                        // get all the occurrences for the selected week for the selected schedule.
+                        // we only want create occurrences start times for this specific schedule
+                        // Note that it could be more than once a week if it is a daily scheduled, or it might not be in the selected week if it is every 2 weeks, etc
+                        var scheduleOccurrenceDates = scheduleOccurrenceDatesLookupByScheduleId.GetValueOrNull( occurrenceSchedule.Id ) ?? new List<DateTime>();
+
+                        List<AttendanceOccurrence> missingAttendanceOccurrenceListForSchedule =
+                            missingAttendanceOccurrenceOccurrenceService.CreateMissingAttendanceOccurrences( scheduleOccurrenceDates, occurrenceSchedule.Id, groupGroupLocationIds );
+
+                        if ( missingAttendanceOccurrenceListForSchedule.Any() )
+                        {
+                            missingAttendanceOccurrenceOccurrenceService.AddRange( missingAttendanceOccurrenceListForSchedule );
+                            missingAttendanceOccurrenceRockContext.SaveChanges();
+                        }
+
+                        occurrenceDatesForAllSchedules.AddRange( scheduleOccurrenceDates );
+                    }
+                }
             }
 
             var occurrenceDateList = occurrenceDatesForAllSchedules.Select( a => a.Date ).Distinct().ToList();
+            var rockContext = new RockContext();
+
+            var attendanceOccurrenceService = new AttendanceOccurrenceService( rockContext );
 
             IQueryable<AttendanceOccurrenceService.AttendanceOccurrenceGroupLocationScheduleConfigJoinResult> attendanceOccurrenceGroupLocationScheduleConfigQuery
                 = attendanceOccurrenceService.AttendanceOccurrenceGroupLocationScheduleConfigJoinQuery( occurrenceDateList, scheduleIds, selectedGroupLocationIds );
@@ -982,7 +1022,6 @@ btnCopyToClipboard.ClientID );
             }
 
             var attendanceOccurrencesList = attendanceOccurrenceGroupLocationScheduleConfigQuery.AsNoTracking()
-                .OrderBy( a => a.GroupLocation.Order ).ThenBy( a => a.GroupLocation.Location.Name )
                 .Select( a => new AttendanceOccurrenceRowItem
                 {
                     OccurrenceDisplayMode = occurrenceDisplayMode,
@@ -1028,8 +1067,9 @@ btnCopyToClipboard.ClientID );
                 .OrderBy( a => a.ScheduledDateTime )
                 .ToList();
 
-            int maxOccurrences = 250;
-            if ( attendanceOccurrencesOrderedList.Count > maxOccurrences )
+            // TODO: just in case we decide to do this
+            int? maxOccurrences = null;
+            if ( maxOccurrences.HasValue && attendanceOccurrencesOrderedList.Count > maxOccurrences )
             {
                 nbFilterMessage.Visible = true;
                 nbFilterMessage.NotificationBoxType = NotificationBoxType.Warning;
@@ -1037,10 +1077,18 @@ btnCopyToClipboard.ClientID );
                     "There are {0} attendance occurrences for selected filter. Please change the filter so that less than {1} occurrences are shown.",
                     attendanceOccurrencesOrderedList.Count,
                     maxOccurrences );
+
                 return;
             }
 
             attendanceOccurrencesOrderedList.InsertRange( 0, unassignedLocationOccurrenceList );
+
+            // if selected group isn't in the list of occurrences, change the selected group to the first one
+            if ( !attendanceOccurrencesOrderedList.Any( a => a.Group != null && a.Group.Id == selectedGroupId ) )
+            {
+                selectedGroupId = attendanceOccurrencesOrderedList.Where( a => a.Group != null ).Select( a => a.Group.Id ).FirstOrDefault();
+                hfSelectedGroupId.Value = selectedGroupId.ToString();
+            }
 
             List<OccurrenceColumnItem> occurrenceColumnDataList;
 
@@ -1457,16 +1505,17 @@ btnCopyToClipboard.ClientID );
             var pickedGroupIds = gpPickedGroups.SelectedIds.ToList();
 
             var authorizedListedGroups = GetAuthorizedListedGroups();
+            var listedGroupIds = authorizedListedGroups.Select( a => a.Id ).ToList();
 
             // if there isn't a currently selected group, default to the first one
             var schedulingEnabledGroupIds = GetSchedulingEnabledGroupIds( authorizedListedGroups.Select( a => a.Id ).ToList() );
 
             var selectedGroupId = hfSelectedGroupId.Value.AsIntegerOrNull();
 
-            if ( selectedGroupId.HasValue )
+            if ( selectedGroupId.HasValue && selectedGroupId > 0 )
             {
                 // if the currently selectedGroupId is not in the updated listedGroupIds, default the selectedGroupId to the first listed Groupid
-                if ( !pickedGroupIds.Contains( selectedGroupId.Value ) || !schedulingEnabledGroupIds.Contains( selectedGroupId.Value ) )
+                if ( !listedGroupIds.Contains( selectedGroupId.Value ) || !schedulingEnabledGroupIds.Contains( selectedGroupId.Value ) )
                 {
                     selectedGroupId = schedulingEnabledGroupIds.FirstOrDefault();
                 }

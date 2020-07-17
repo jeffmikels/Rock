@@ -245,18 +245,17 @@
 
                                             <div class="js-resource resource unselectable" data-status="unscheduled" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-is-scheduled="" data-person-id="">
                                                 <div class="flex">
-                                                    <div>
-                                                        <span class="resource-name js-resource-name flex-grow-1"></span>
-                                                        <ul class="resource-assignment-preference js-resource-assignment-preference list-unstyled small text-muted hide-transit">
-                                                            <li>Todo Preference List</li>
-                                                        </ul>
+                                                    <span class="resource-name js-resource-name"></span>
+
+                                                    <div class="resource-assignment-preference js-resource-assignment-preference">
                                                     </div>
 
-                                                    <span class="resource-member-role js-resource-member-role small text-muted">
-                                                        ToDo Member Role
-                                                    </span>
+                                                    <div class="resource-member-role js-resource-member-role">
+                                                    </div>
 
-                                                    <div class="resource-meta js-resource-meta text-right"></div>
+                                                    <div class="resource-meta">
+                                                        <div class="js-resource-meta text-right"></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

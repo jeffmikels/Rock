@@ -1022,6 +1022,8 @@ namespace Rock.Model
                 {
                     PersonId = a.Id,
                     GroupMemberId = null,
+                    GroupRole = null,
+                    ResourceAssignments = null,
                     Note = null,
                     PersonNickName = a.NickName,
                     PersonLastName = a.LastName,
@@ -1254,7 +1256,36 @@ namespace Rock.Model
                 BlackoutDateRanges = personScheduleExclusionQueryForOccurrence.Where( e => e.PersonAlias.PersonId == ap.Person.Id ).Select( s => new { s.StartDate, s.EndDate } ).ToList()
             } );
 
-            var result = scheduledAttendancesQuery.ToList().Select( a =>
+            var scheduledAttendancesList = scheduledAttendancesQuery.ToList();
+            var personIds = scheduledAttendancesList.Select( a => a.PersonId ).Distinct().ToList();
+
+            // create a lookup so we can find out which role the person has in the occurrence group (if they are a member)
+            var groupMemberLookupQuery = new GroupMemberService( rockContext )
+                .Queryable().Where( a => a.GroupId == groupId );
+
+            if ( personIds.Count < 1000 )
+            {
+                // if there are less than 1000, just get the member records for people that are scheduled, otherwise the SQL will get too complex
+                groupMemberLookupQuery = groupMemberLookupQuery.Where( a => personIds.Contains( a.PersonId ) );
+            }
+
+            var groupMemberLookup = groupMemberLookupQuery.Select( a => new
+                {
+                    a.Id,
+                    a.PersonId,
+                    a.GroupRoleId,
+                    a.GroupRole.IsLeader,
+                } )
+                .ToList()
+                .GroupBy( a => a.PersonId )
+                .ToDictionary( k => k.Key, v => v.Select( s => new
+                {
+                    MemberId = s.Id,
+                    s.GroupRoleId,
+                    s.IsLeader
+                } ) );
+
+            var result = scheduledAttendancesList.Select( a =>
             {
                 ScheduledAttendanceItemStatus status = Attendance.GetScheduledAttendanceItemStatus( a.RSVP, a.ScheduledToAttend );
 
@@ -1265,12 +1296,45 @@ namespace Rock.Model
                     personBlackoutDates = scheduleOccurrenceDateList.Where( d => personExclusionDateRange.Contains( d ) ).ToList();
                 }
 
+                /*
+                  {
+                    PersonId = a.PersonId,
+                    GroupMemberId = a.GroupMemberId,
+                    GroupRole = groupTypeRoleCacheLookup.GetValueOrNull( a.GroupRoleId ),
+                    ResourceAssignments = a.MemberAssignments.Select( x => new SchedulerResourceAssignment
+                    {
+                        ScheduleId = x.ScheduleId,
+                        ScheduleName = x.ScheduleName,
+                        LocationId = x.LocationId,
+                        LocationName = x.LocationName
+                    } ).ToList(),
+                    Note = a.Note,
+                    PersonNickName = a.NickName,
+                    PersonLastName = a.LastName,
+                    PersonName = Person.FormatFullName( a.NickName, a.LastName, a.SuffixValueId, a.RecordTypeValueId ),
+                    HasGroupRequirementsConflict = groupMemberIdsThatLackGroupRequirements?.Contains( a.GroupMemberId ) ?? false,
+                } )
+                 */
+
+                var groupMemberInfo = groupMemberLookup.GetValueOrNull( a.PersonId )?.OrderBy(x => !x.IsLeader)?.FirstOrDefault();
+
                 return new SchedulerResourceAttend
                 {
                     AttendanceId = a.AttendanceId,
                     OccurrenceDate = occurrenceDate,
                     ConfirmationStatus = status.ConvertToString( false ).ToLower(),
                     PersonId = a.PersonId,
+
+                    // TODO find MemberRecord if this Person is in the Occurrence Group
+                    GroupMemberId = groupMemberInfo?.MemberId,
+                    //GroupRole = GroupTypeCache.
+
+                    // not needed for  resource that is getting listed in an occurrence
+                    ResourceAssignments = null,
+                    Note = null,
+
+                    PersonNickName = a.NickName,
+                    PersonLastName = a.LastName,
                     PersonName = Person.FormatFullName( a.NickName, a.LastName, a.SuffixValueId, a.RecordTypeValueId ),
                     HasSchedulingConflict = a.HasSchedulingConflict,
                     BlackoutDates = personBlackoutDates,
@@ -2126,6 +2190,14 @@ namespace Rock.Model
         /// The group role.
         /// </value>
         public GroupTypeRoleCache GroupRole { get; set; }
+
+        /// <summary>
+        /// Gets the name of the group role.
+        /// </summary>
+        /// <value>
+        /// The name of the group role.
+        /// </value>
+        public string GroupRoleName => GroupRole?.Name;
 
         /// <summary>
         /// Gets the resource assignments.

@@ -557,16 +557,6 @@ namespace Rock.Model
                 missingAttendanceOccurrenceList.AddRange( missingAttendanceOccurrencesForOccurrenceDate );
             }
 
-            if ( missingAttendanceOccurrenceList.Any() )
-            {
-                // set (Hydrate) the Schedule since ScheduleId has a value
-                var schedule = new ScheduleService( this.Context as RockContext ).Get( scheduleId );
-                foreach ( var missingAttendanceOccurrence in missingAttendanceOccurrenceList )
-                {
-                    missingAttendanceOccurrence.Schedule = schedule;
-                }
-            }
-
             return missingAttendanceOccurrenceList;
         }
 
