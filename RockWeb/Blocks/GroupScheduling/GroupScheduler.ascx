@@ -292,6 +292,9 @@
 
                                             <div class="flex">
                                                 <span class="resource-name js-resource-name flex-grow-1"></span>
+                                                <div class="resource-member-role js-resource-member-role">
+                                                </div>
+
                                                 <div class="resource-meta">
 
                                                     <div class="js-resource-meta text-right"></div>

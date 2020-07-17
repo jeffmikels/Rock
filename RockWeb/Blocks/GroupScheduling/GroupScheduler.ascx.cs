@@ -1619,7 +1619,7 @@ btnCopyToClipboard.ClientID );
                 case SchedulerResourceListSourceType.ParentGroup:
                     {
                         lSelectedResourceTypeDropDownText.Text = "Parent Group";
-                        sfResource.Placeholder = "Search Parent Group";
+                        sfResource.Placeholder = "Search";
                         break;
                     }
 
