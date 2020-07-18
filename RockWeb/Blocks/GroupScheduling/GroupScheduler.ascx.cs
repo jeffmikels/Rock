@@ -920,8 +920,6 @@ btnCopyToClipboard.ClientID );
 
             var scheduleIds = GetSelectedScheduleIds( authorizedListedGroups );
 
-
-
             var occurrenceSchedules = new ScheduleService( new RockContext() ).GetByIds( scheduleIds ).AsNoTracking().ToList();
 
             if ( !occurrenceSchedules.Any() )
@@ -1092,8 +1090,6 @@ btnCopyToClipboard.ClientID );
 
             List<OccurrenceColumnItem> occurrenceColumnDataList;
 
-            var sundayDate = RockDateTime.Now.SundayDate();
-
             if ( occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup )
             {
                 // sort the occurrenceColumns so the selected Group is in the first column, then order by Group.Order/Name
@@ -1142,7 +1138,7 @@ btnCopyToClipboard.ClientID );
                     } )
                     .OrderBy( a => a.OccurrenceDate )
                     .ThenBy( a => a.Schedule.Order )
-                    .ThenBy( a => a.Schedule.GetNextStartDateTime( sundayDate ) )
+                    .ThenBy( a => a.Schedule.GetNextStartDateTime( occurrenceSundayWeekStartDate ) )
                     .ToList();
             }
 
