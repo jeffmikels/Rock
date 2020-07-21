@@ -1068,7 +1068,6 @@ $(document).ready(function() {
                         {
                             grid.CreatePreviewColumns( entityType );
                             var dbContext = dv.GetDbContext();
-                            Stopwatch stopwatch = Stopwatch.StartNew();
                             var qry = dv.GetQuery( grid.SortProperty, dbContext, GetAttributeValue( "DatabaseTimeout" ).AsIntegerOrNull() ?? 180, out errorMessages );
 
                             if ( fetchRowCount.HasValue )
@@ -1078,7 +1077,6 @@ $(document).ready(function() {
 
                             grid.SetLinqDataSource( qry.AsNoTracking() );
                             grid.DataBind();
-                            stopwatch.Stop();
                         }
                         catch ( Exception ex )
                         {
