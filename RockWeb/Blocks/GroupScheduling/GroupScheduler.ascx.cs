@@ -70,9 +70,10 @@ namespace RockWeb.Blocks.GroupScheduling
             public const string GroupId = "GroupId";
             public const string GroupIds = "GroupIds";
             public const string ShowChildGroups = "ShowChildGroups";
-            public const string SelectedDate = "SelectedDate";
+            public const string SundayDate = "SundayDate";
             public const string SelectAllSchedules = "SelectAllSchedules";
-            public const string IndividualScheduleId = "ScheduleId";
+            public const string ScheduleId = "ScheduleId";
+            public const string LocationId = "LocationId";
             public const string LocationIds = "LocationIds";
             public const string ResourceListSourceType = "ResourceListSourceType";
             public const string GroupMemberFilterType = "GroupMemberFilterType";
@@ -347,7 +348,7 @@ btnCopyToClipboard.ClientID );
         /// </summary>
         private void LoadFilterFromUserPreferencesOrURL()
         {
-            DateTime selectedSundayDate = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.SelectedDate, UserPreferenceKey.SelectedDate ).AsDateTime() ?? RockDateTime.Now.SundayDate();
+            DateTime selectedSundayDate = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.SundayDate, UserPreferenceKey.SelectedDate ).AsDateTime() ?? RockDateTime.Now.SundayDate();
             if ( _listedSundayDates != null && _listedSundayDates.Contains( selectedSundayDate ) )
             {
                 hfWeekSundayDate.Value = selectedSundayDate.ToISO8601DateString();
@@ -357,39 +358,66 @@ btnCopyToClipboard.ClientID );
                 hfWeekSundayDate.Value = RockDateTime.Now.SundayDate().ToISO8601DateString();
             }
 
+            int? selectedGroupId = null;
+            List<int> pickerGroupIds;
+            bool showChildGroups;
+
+            if ( this.PageParameter( PageParameterKey.GroupIds ).IsNotNullOrWhiteSpace() || this.PageParameter( PageParameterKey.GroupId ).IsNotNullOrWhiteSpace() )
+            {
+                // disable the groups picker if groupId(s) are specified in the URL
+                var pageParameterGroupIds = ( this.PageParameter( PageParameterKey.GroupIds ) ?? string.Empty ).Split( ',' ).AsIntegerList();
+                var pageParameterGroupId = this.PageParameter( PageParameterKey.GroupId ).AsIntegerOrNull();
+                if ( pageParameterGroupId.HasValue )
+                {
+                    selectedGroupId = pageParameterGroupId.Value;
+                    if ( !pageParameterGroupIds.Contains( selectedGroupId.Value ) )
+                    {
+                        pageParameterGroupIds.Add( selectedGroupId.Value );
+                    }
+                }
+
+                pickerGroupIds = pageParameterGroupIds;
+                gpPickedGroups.Enabled = false;
+                btnShowChildGroups.Enabled = false;
+                showChildGroups = this.PageParameter( PageParameterKey.ShowChildGroups ).AsBoolean();
+            }
+            else
+            {
+                pickerGroupIds = ( this.GetBlockUserPreference( UserPreferenceKey.PickerGroupIds ) ?? string.Empty ).Split( ',' ).AsIntegerList();
+                selectedGroupId = this.GetBlockUserPreference( UserPreferenceKey.SelectedGroupId ).AsIntegerOrNull();
+                showChildGroups = this.GetBlockUserPreference( UserPreferenceKey.ShowChildGroups ).AsBoolean();
+            }
+
             // if there is a 'GroupIds' parameter/userpreference, that defines what groups are shown.
             // However, only one group can be selected/active at a time
-            List<int> pickerGroupIds =
-                ( GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupIds, UserPreferenceKey.PickerGroupIds ) ?? string.Empty ).Split( ',' ).AsIntegerList();
-
             gpPickedGroups.SetValues( pickerGroupIds );
 
-            // if there is a 'GroupId' parameter that will define active/selected group
-            int? selectedGroupId = GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupId, UserPreferenceKey.SelectedGroupId ).AsIntegerOrNull();
-
+            // if there is a 'GroupId' parameter/userpreference that will define active/selected group
             if ( selectedGroupId.HasValue )
             {
                 // make sure a valid group was specified
                 selectedGroupId = new GroupService( new RockContext() ).GetSelect( selectedGroupId.Value, s => ( int? ) s.Id );
             }
 
-            bool showChildGroups = GetUrlSettingOrBlockUserPreference( PageParameterKey.ShowChildGroups, UserPreferenceKey.ShowChildGroups ).AsBooleanOrNull() ?? false;
             SetStateForShowChildGroupsButton( showChildGroups );
-
-            if ( this.PageParameter( PageParameterKey.GroupIds ).IsNotNullOrWhiteSpace() )
-            {
-                // disable the groups picker if groupId(s) are specified in the URL
-                gpPickedGroups.Enabled = false;
-                btnShowChildGroups.Enabled = false;
-            }
 
             hfSelectedGroupId.Value = selectedGroupId.ToString();
 
             var authorizedListedGroups = GetAuthorizedListedGroups();
 
             UpdateScheduleList( authorizedListedGroups );
-            bool selectAllSchedules = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.SelectAllSchedules, UserPreferenceKey.SelectAllSchedules ).AsBoolean();
-            int? selectedIndividualScheduleId = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.IndividualScheduleId, UserPreferenceKey.SelectedIndividualScheduleId ).AsIntegerOrNull();
+            bool selectAllSchedules;
+            int? selectedIndividualScheduleId;
+            if ( this.PageParameter( PageParameterKey.SelectAllSchedules ).IsNotNullOrWhiteSpace() || this.PageParameter( PageParameterKey.ScheduleId ).IsNotNullOrWhiteSpace() )
+            {
+                selectAllSchedules = this.PageParameter( PageParameterKey.SelectAllSchedules ).AsBoolean();
+                selectedIndividualScheduleId = this.PageParameter( PageParameterKey.ScheduleId ).AsIntegerOrNull();
+            }
+            else
+            {
+                selectAllSchedules = this.GetBlockUserPreference( UserPreferenceKey.SelectAllSchedules ).AsBoolean();
+                selectedIndividualScheduleId = this.GetBlockUserPreference( UserPreferenceKey.SelectedIndividualScheduleId ).AsIntegerOrNull();
+            }
 
             if ( selectAllSchedules )
             {
@@ -401,15 +429,62 @@ btnCopyToClipboard.ClientID );
             }
 
             UpdateLocationList( authorizedListedGroups );
-            hfSelectedLocationIds.Value = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.LocationIds, UserPreferenceKey.SelectedLocationIds );
 
+            if ( this.PageParameter( PageParameterKey.LocationId ).IsNotNullOrWhiteSpace() )
+            {
+                // if the URL has LocationId (singular) use that as the location
+                hfSelectedLocationIds.Value = this.PageParameter( PageParameterKey.LocationId );
+            }
+            else
+            {
+                // other, if the URL has LocationIds (plural), of there is a Locations user preference use that as the locations
+                hfSelectedLocationIds.Value = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.LocationIds, UserPreferenceKey.SelectedLocationIds );
+            }
+
+            SchedulerResourceGroupMemberFilterType groupMemberFilterType;
             var resourceListSourceType = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.ResourceListSourceType, UserPreferenceKey.SelectedResourceListSourceType ).ConvertToEnumOrNull<SchedulerResourceListSourceType>() ?? SchedulerResourceListSourceType.GroupMembers;
-            var groupMemberFilterType = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupMemberFilterType, UserPreferenceKey.GroupMemberFilterType ).ConvertToEnumOrNull<SchedulerResourceGroupMemberFilterType>() ?? SchedulerResourceGroupMemberFilterType.ShowAllGroupMembers;
+            if ( resourceListSourceType == SchedulerResourceListSourceType.GroupMatchingPreference )
+            {
+                groupMemberFilterType = SchedulerResourceGroupMemberFilterType.ShowMatchingPreference;
+            }
+            else
+            {
 
+                groupMemberFilterType = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupMemberFilterType, UserPreferenceKey.GroupMemberFilterType ).ConvertToEnumOrNull<SchedulerResourceGroupMemberFilterType>() ?? SchedulerResourceGroupMemberFilterType.ShowAllGroupMembers;
+            }
+
+            // if PageParameters have a DataViewId or AlternateGroupId, but didn't specify ResourceListSourceType,
+            // assume they want use the DataView Source type when there is a DataViewId, or
+            // AlternateGroup source type if AlternateGroupId is specified
+            if ( this.PageParameter( PageParameterKey.ResourceListSourceType ).IsNullOrWhiteSpace() )
+            {
+                if ( this.PageParameter( PageParameterKey.DataViewId ).IsNotNullOrWhiteSpace() )
+                {
+                    resourceListSourceType = SchedulerResourceListSourceType.DataView;
+                }
+                else if ( this.PageParameter( PageParameterKey.AlternateGroupId ).IsNotNullOrWhiteSpace() )
+                {
+                    resourceListSourceType = SchedulerResourceListSourceType.AlternateGroup;
+                }
+            }
+
+            // NOTE: if PageParameters or UserPreferences specify an invalid combination of ResourceSourceType and GroupId,
+            // For example, an AlternateGroupId but when a Group has GroupRequirements, 
+            // ApplyFilter() will correct for it 
             SetResourceListSourceType( resourceListSourceType, groupMemberFilterType );
 
             gpResourceListAlternateGroup.SetValue( this.GetUrlSettingOrBlockUserPreference( PageParameterKey.AlternateGroupId, UserPreferenceKey.AlternateGroupId ).AsIntegerOrNull() );
-            dvpResourceListDataView.SetValue( this.GetUrlSettingOrBlockUserPreference( PageParameterKey.DataViewId, UserPreferenceKey.DataViewId ).AsIntegerOrNull() );
+
+            var dataViewId = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.DataViewId, UserPreferenceKey.DataViewId ).AsIntegerOrNull();
+            if ( dataViewId.HasValue )
+            {
+                // make sure it is a Person DataView
+                var dataView = new DataViewService( new RockContext() ).Get( dataViewId.Value );
+                if ( dataView != null && dataView.EntityTypeId == EntityTypeCache.GetId( Rock.SystemGuid.EntityType.PERSON.AsGuid() ) )
+                {
+                    dvpResourceListDataView.SetValue( dataView );
+                }
+            }
         }
 
         /// <summary>
@@ -541,9 +616,14 @@ btnCopyToClipboard.ClientID );
             {
                 var sameGroupSourceTypes = new SchedulerResourceListSourceType[] { SchedulerResourceListSourceType.GroupMembers, SchedulerResourceListSourceType.GroupMatchingPreference };
 
-                // don't show options for other groups or people if SchedulingMustMeetRequirements
+                // if SchedulingMustMeetRequirements
+                // -- don't show options for other groups or people
+                // -- don't show the option to add an individual person person
                 // this is because people from other groups wouldn't meet scheduling requirements (since they aren't in the same group as the Attendance Occurrence)
                 schedulerResourceListSourceTypes = sameGroupSourceTypes.ToList();
+                pnlAddPerson.Visible = false;
+                ppAddPerson.Visible = false;
+
 
                 if ( !sameGroupSourceTypes.Contains( resourceListSourceType ) )
                 {
@@ -1348,6 +1428,9 @@ btnCopyToClipboard.ClientID );
             var columnCssClasses = new List<string>();
             columnCssClasses.Add( "board-column" );
             columnCssClasses.Add( "occurrence-column" );
+            columnCssClasses.Add( "js-occurrence-column" );
+
+            bool isSchedulerTargetColumn = false;
 
             if ( occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup )
             {
@@ -1362,6 +1445,10 @@ btnCopyToClipboard.ClientID );
                 var selectedGroupId = hfSelectedGroupId.Value.AsInteger();
 
                 bool isSelectedColumn = hfSelectedGroupId.Value.AsInteger() == occurrenceColumnItem.Group.Id;
+
+                // when in multi-group mode, only one group (column) can have resources dragged in and out of it
+                isSchedulerTargetColumn = isSelectedColumn;
+
                 if ( isSelectedColumn )
                 {
                     columnCssClasses.Add( "occurrence-column-selected" );
@@ -1383,6 +1470,10 @@ btnCopyToClipboard.ClientID );
             {
                 columnCssClasses.Add( "occurrence-column-schedule" );
 
+                // when in single-group mode, all columns can can have resources dragged in or out of it
+                isSchedulerTargetColumn = true;
+                columnCssClasses.Add( "js-scheduler-target-column" );
+
                 // Single Group mode, so show column header with Schedule Info
                 var lSingleGroupModeColumnHeadingOccurrenceDate = e.Item.FindControl( "lSingleGroupModeColumnHeadingOccurrenceDate" ) as Literal;
                 var lSingleGroupModeColumnHeadingOccurrenceTime = e.Item.FindControl( "lSingleGroupModeColumnHeadingOccurrenceTime" ) as Literal;
@@ -1400,6 +1491,10 @@ btnCopyToClipboard.ClientID );
 
             var pnlOccurrenceColumn = e.Item.FindControl( "pnlOccurrenceColumn" ) as Panel;
             pnlOccurrenceColumn.CssClass = columnCssClasses.AsDelimited( " " );
+
+            // when in Multi-Group mode, only one group can be scheduled at a time,
+            // which means that only this column can have resources dragged in or out of it
+            pnlOccurrenceColumn.Attributes["data-is-scheduler-target-column"] = isSchedulerTargetColumn.ToJavaScriptValue();
 
             rptAttendanceOccurrences.DataSource = occurrenceColumnItem.AttendanceOccurrenceItems;
             rptAttendanceOccurrences.DataBind();

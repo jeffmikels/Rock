@@ -47,6 +47,20 @@
                             // don't let resources with a full blackout or requirement conflicts to be scheduled
                             return false;
                         }
+                        
+                        if (source.classList.contains('js-scheduler-target-container')) {
+                            // If multi-group mode this will be a group, and resources can only be dragged out of this occurrence column it is the the currently selected (active) group
+                            // In single-group mode, this will be a schedule/day, so resources can be dragged out of any occurrence column
+
+                            var $occurrenceColumn = $(source).closest('.js-occurrence-column');
+                            var isSchedulerTargetColumn = $occurrenceColumn.data("is-scheduler-target-column")
+                            console.log(isSchedulerTargetColumn);
+                            if (!isSchedulerTargetColumn) {
+                                console.log('return false');
+                                return false;
+                            }
+                        }
+
                         return true;
                     },
                     copy: function (el, source) {
@@ -59,7 +73,21 @@
                     accepts: function (el, target, source, sibling) {
                         if (target.classList.contains('js-scheduler-target-container')) {
                             var $resourceDiv = $(el);
+
+                            // the occurrence of this target occurrence column
+                            // If multi-group mode this occurrence column will be a group, and resources can only be dragged into it is the the currently selected (active) group
+                            // In single-group mode, this occurrence column will be a schedule/day, and any target column can be dragged into
+                            var $occurrenceColumn = $(target).closest('.js-occurrence-column');
+                            var isSchedulerTargetColumn = $occurrenceColumn.data("is-scheduler-target-column")
+                            console.log('accepts');
+                            console.log(isSchedulerTargetColumn);
+                            if (!isSchedulerTargetColumn) {
+                                console.log('return false');
+                                return false;
+                            }
+
                             var blackoutDates = $resourceDiv.data('blackout-dates');
+                            var allowedDate = $resourceDiv.data('occurrenceDate');
 
                             var $targetOccurrence = $(target).closest('.js-scheduled-occurrence')
                             var targetOccurrenceDate = new Date($targetOccurrence.find('.js-attendanceoccurrence-date').val()).getTime();

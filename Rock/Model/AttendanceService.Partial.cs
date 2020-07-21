@@ -1195,7 +1195,7 @@ namespace Rock.Model
                 // then sort by LastName/FirstName
                 schedulerResourceList = schedulerResourceList
                     .OrderBy( a => a.GroupRole?.Order ?? int.MaxValue )
-                    .OrderBy( a => a.PersonLastName )
+                    .ThenBy( a => a.PersonLastName )
                     .ThenBy( a => a.PersonNickName )
                     .ThenBy( a => a.PersonId ).ToList();
 

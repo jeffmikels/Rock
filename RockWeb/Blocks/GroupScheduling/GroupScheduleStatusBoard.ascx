@@ -54,8 +54,14 @@
             Sys.Application.add_load(function () {
                 Rock.controls.fullScreen.initialize();
 
+                var $groupSchedulerLink = $('.js-group-scheduler-link');
+
+                $groupSchedulerLink.on('click', function (e) {
+                    e.stopImmediatePropagation();
+                });
+
                 $('.js-group-header').on('click', function () {
-                    $(this).find('.fa').css({'transform' : 'rotate(-90deg)'});
+                    $(this).find('.js-toggle-panel').css({'transform' : 'rotate(-90deg)'});
                     var $groupLocations = $(this).closest('.js-group-locations');
                     var locationsExpanded = $groupLocations.data('locations-expanded') == 1;
                     if (locationsExpanded) {
@@ -67,7 +73,7 @@
                         $groupLocations.data('locations-expanded', 0);
                     }
                     else {
-                    $(this).find('.fa').css({'transform' : 'rotate(0deg)'});
+                        $(this).find('.js-toggle-panel').css({'transform' : 'rotate(0deg)'});
                         $('.js-location-row', $groupLocations).children('td')
                             .children()
                             .slideDown();

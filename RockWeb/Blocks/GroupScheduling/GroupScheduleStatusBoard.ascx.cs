@@ -249,11 +249,16 @@ namespace RockWeb.Blocks.GroupScheduling
             sbTable.AppendLine( "</tr>" );
             sbTable.AppendLine( "</thead>" );
 
-            var groupLocationsList = groupsQuery.Where( g => g.GroupLocations.Any() ).OrderBy( a => a.Order ).ThenBy( a => a.Name ).Select( g => new
+            var groupLocationsList = groupsQuery.Where( g => g.GroupLocations.Any() ).OrderBy( a => a.Order ).ThenBy( a => a.Name ).Select( g => new GroupInfo
             {
                 Group = g,
-                PersonRoleMap = g.Members.Select( m => new PersonRoleInGroup { PersonId = m.PersonId, GroupRoleId = m.GroupRoleId } ).ToList(),
-                LocationScheduleCapacitiesList = g.GroupLocations.OrderBy( gl => gl.Order ).ThenBy( gl => gl.Location.Name ).Select( a => new
+                MemberList = g.Members.Select( m =>
+                    new MemberInfo
+                    {
+                        PersonId = m.PersonId,
+                        GroupRoleId = m.GroupRoleId
+                    } ).ToList(),
+                LocationScheduleCapacitiesList = g.GroupLocations.OrderBy( gl => gl.Order ).ThenBy( gl => gl.Location.Name ).Select( a => new LocationScheduleCapacityInfo
                 {
                     ScheduleCapacitiesList = a.GroupLocationScheduleConfigs.Select( sc =>
                          new ScheduleCapacities
@@ -263,7 +268,7 @@ namespace RockWeb.Blocks.GroupScheduling
                              DesiredCapacity = sc.DesiredCapacity,
                              MaximumCapacity = sc.MaximumCapacity
                          } ),
-                    a.Location
+                    Location = a.Location
                 } ).ToList()
             } ).ToList();
 
@@ -275,9 +280,24 @@ namespace RockWeb.Blocks.GroupScheduling
                 StringBuilder sbGroupLocations = new StringBuilder();
                 sbGroupLocations.AppendLine( string.Format( "<tbody class='group-locations js-group-locations' data-group-id='{0}' data-locations-expanded='1'>", group.Id ) );
 
+                var groupSchedulingUrl = ResolveRockUrl( string.Format( "~/GroupScheduler/{0}", group.Id ) );
+
                 // group header row
                 sbGroupLocations.AppendLine( "<tr class='group-heading js-group-header thead-dark clickable' >" );
-                sbGroupLocations.AppendLine( string.Format( "<th></th><th colspan='{0}'><i class='fa fa-chevron-down'></i> {1}</th>", columnsCount - 1, group.Name ) );
+                sbGroupLocations.AppendLine(
+                    string.Format(
+                        @"
+<th></th>
+<th colspan='{0}'>
+    <i class='fa fa-chevron-down js-toggle-panel'></i> {1}
+    <a href='{2}' class='btn btn-link text-color js-group-scheduler-link'><i class='{3}'></i></a>
+</th>",
+                        columnsCount - 1, // {0}
+                        group.Name, // {1}
+                        groupSchedulingUrl,  // {2}
+                        "fa fa-calendar-check-o" )  // {3}
+                    );
+
                 sbGroupLocations.AppendLine( "</tr>" );
 
                 // group/schedule+locations
@@ -308,11 +328,25 @@ namespace RockWeb.Blocks.GroupScheduling
 
                         int scheduledCount = 0;
 
+
+                        var groupTypeRoleLookup = groupType.Roles.ToDictionary( k => k.Id, v => v );
+
                         if ( occurrenceScheduledAttendances != null && occurrenceScheduledAttendances.ScheduledAttendees.Any() )
                         {
-                            foreach ( ScheduledPersonInfo schedulePersonIfno in occurrenceScheduledAttendances.ScheduledAttendees )
+                            foreach ( ScheduledPersonInfo scheduledPersonInfo in occurrenceScheduledAttendances.ScheduledAttendees )
                             {
-                                schedulePersonIfno.SetPersonGroupRoleInGroup( groupType, groupLocations.PersonRoleMap );
+                                var personRolesInGroup = groupLocations
+                                    .MemberList
+                                    .Where( m => m.PersonId == scheduledPersonInfo.ScheduledPerson.Id )
+                                    .Select( m => groupTypeRoleLookup.GetValueOrNull( m.GroupRoleId ) )
+                                    .Where( r => r != null )
+                                    .ToList();
+
+                                var personRoleInGroup = personRolesInGroup
+                                    .OrderBy( r => r.Order )
+                                    .FirstOrDefault();
+
+                                scheduledPersonInfo.PersonRoleInGroup = personRoleInGroup;
                             }
 
                             // sort so that it is Yes, then Pending, then Denied
@@ -342,7 +376,7 @@ namespace RockWeb.Blocks.GroupScheduling
                                         "<li class='slot person {0}' data-status='{0}'><i class='status-icon'></i><span class='person-name'>{1}</span><span class='person-group-role pull-right'>{2}</span></li>",
                                         status.ConvertToString( false ).ToLower(),
                                         scheduledPerson.ScheduledPerson,
-                                        scheduledPerson.GroupTypeRole ) );
+                                        scheduledPerson.PersonRoleInGroup ) );
                             }
 
                             scheduledCount = attendanceScheduledPersonList.Where( a => a.RSVP != RSVP.No ).Count();
@@ -555,15 +589,15 @@ namespace RockWeb.Blocks.GroupScheduling
         {
             public Person ScheduledPerson { get; set; }
 
-            public GroupTypeRoleCache GroupTypeRole { get; private set; }
+            public GroupTypeRoleCache PersonRoleInGroup { get; set; }
 
             public int GroupTypeRoleOrder
             {
                 get
                 {
-                    if ( GroupTypeRole != null )
+                    if ( PersonRoleInGroup != null )
                     {
-                        return GroupTypeRole.Order;
+                        return PersonRoleInGroup.Order;
                     }
                     else
                     {
@@ -577,37 +611,26 @@ namespace RockWeb.Blocks.GroupScheduling
 
             public bool? ScheduledToAttend { get; set; }
 
-            public void SetPersonGroupRoleInGroup( GroupTypeCache groupType, List<PersonRoleInGroup> personRoleInGroupList )
-            {
-                var personRolesInGroup = personRoleInGroupList.Where( a => a.PersonId == this.ScheduledPerson.Id ).ToArray();
-                var groupTypeRoles = groupType.Roles.ToDictionary( k => k.Id, v => v );
-                this.GroupTypeRole = null;
-
-                if ( personRolesInGroup.Any() )
-                {
-                    if ( personRolesInGroup.Count() == 1 )
-                    {
-                        this.GroupTypeRole = groupTypeRoles.GetValueOrNull( personRolesInGroup[0].GroupRoleId );
-                    }
-                    else
-                    {
-                        PersonRoleInGroup firstRole = personRolesInGroup.OrderBy( a => groupTypeRoles.GetValueOrNull( personRolesInGroup[0].GroupRoleId ).Order ).FirstOrDefault();
-                        if ( firstRole != null )
-                        {
-                            this.GroupTypeRole = groupTypeRoles.GetValueOrNull( firstRole.GroupRoleId );
-                        }
-                    }
-                }
-            }
-
             public RSVP RSVP { get; set; }
         }
 
-        private class PersonRoleInGroup
+        private class MemberInfo
         {
             public int PersonId { get; internal set; }
-
             public int GroupRoleId { get; internal set; }
+        }
+
+        private class GroupInfo
+        {
+            public Group Group { get; set; }
+            public List<MemberInfo> MemberList { get; set; }
+            public List<LocationScheduleCapacityInfo> LocationScheduleCapacitiesList { get; set; }
+        }
+
+        private class LocationScheduleCapacityInfo
+        {
+            public IEnumerable<ScheduleCapacities> ScheduleCapacitiesList { get; set; }
+            public Location Location { get; set; }
         }
     }
 }

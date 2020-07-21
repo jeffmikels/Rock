@@ -332,14 +332,21 @@
                                     <asp:Panel ID="pnlSchedulerLocations" runat="server" CssClass="d-flex flex-row w-100 h-100 locations js-scheduled-occurrences">
                                         <asp:Repeater ID="rptOccurrenceColumns" runat="server" OnItemDataBound="rptOccurrenceColumns_ItemDataBound">
                                             <ItemTemplate>
-                                                <%-- pnlOccurrenceColumn can have the following classes
-                                                    - occurrence-column (always)
+                                                <%-- pnlOccurrenceColumn
+
+                                                    can have the following classes:
+                                                    - occurrence-column, js-occurrence-column (always)
                                                     - occurrence-column-selected (if in multi-group mode, and this is the selected group)
                                                     - occurrence-column-group (if in multi-group mode)
                                                     - occurrence-column-schedule (if in single-group mode, where each column is a schedule/day)
+
+                                                    and these data attributes:
+                                                      - data-is-scheduler-target-column
+                                                        - If in Multi-Group mode, only one group can be scheduled at a time, so only one column will have this set to true
+                                                        - If in Single-Group mode, all columns will have this set to true
                                                 --%>
-                                                <asp:Panel ID="pnlOccurrenceColumn" runat="server" CssClass="board-column occurrence-column">
-                                                    <%-- Occurrence Column Heading when in Multi-Group mode (should Group name with Checkbox --%>
+                                                <asp:Panel ID="pnlOccurrenceColumn" runat="server" CssClass="board-column occurrence-column js-occurrence-column" data-is-scheduler-target-column="false" >
+                                                    <%-- Occurrence Column Heading when in Multi-Group mode (show Group name with Checkbox --%>
                                                     <asp:Panel ID="pnlMultiGroupModeColumnHeading" runat="server" CssClass="board-heading mt-3">
                                                         <div class="d-flex justify-content-between">
                                                             <span class="board-column-title"><asp:Literal ID="lMultiGroupModeColumnGroupNameHtml" runat="server" /></span>
@@ -353,7 +360,7 @@
                                                         <div class="board-heading-pill mt-2 mb-3" style="background:#C8C8C8"></div>
                                                     </asp:Panel>
 
-                                                    <%-- Occurrence Column Heading when in Single-Group mode (should schedule information) --%>
+                                                    <%-- Occurrence Column Heading when in Single-Group mode (show schedule information) --%>
                                                     <asp:Panel ID="pnlSingleGroupModeColumnHeading" runat="server">
                                                         <h1>
                                                             <asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceDate" runat="server" /></h1>
