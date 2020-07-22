@@ -44,7 +44,7 @@
                     Group Schedule Roster
                 </h1>
 
-                <div class="panel-labels">
+                <div class="panel-labels d-print-none">
                     <asp:Literal ID="lLiveUpdateEnabled" runat="server" Visible="false"><i class='fa fa-check-square-o'></i></asp:Literal>
                     <asp:Literal ID="lLiveUpdateDisabled" runat="server" Visible="true"><i class='fa fa-square-o'></i></asp:Literal>
                     <span class="js-live-update-label">

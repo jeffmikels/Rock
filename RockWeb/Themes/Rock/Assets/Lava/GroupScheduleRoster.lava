@@ -82,7 +82,7 @@
             {%- if scheduledIndividualCount == 1 -%}
               <div class="row mb-3"><div class="col-md-6"><strong class="name-column-header ml-4">Name</strong></div></div>
             {%- else -%}
-              <div class="row mb-3"><div class="col-md-6"><strong class="name-column-header ml-4">Name</strong></div><div class="col-md-6"><strong class="name-column-header ml-4">Name</strong></div></div>
+              <div class="row mb-3"><div class="col-md-6"><strong class="name-column-header ml-4">Name</strong></div><div class="col-md-6 d-none d-md-block"><strong class="name-column-header ml-4">Name</strong></div></div>
             {%- endif -%}
             <div class="row">
               {%- for scheduledIndividual in ScheduledIndividuals -%}
