@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
-//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -74,7 +73,6 @@ namespace RockWeb.Blocks.GroupScheduling
     {
         private static class AttributeDefault
         {
-            // TODO, have lava in this block, instead of in a file
             public const string RosterLavaDefault = @"{% include '~~/Assets/Lava/GroupScheduleRoster.lava' %}";
         }
 
@@ -94,9 +92,10 @@ namespace RockWeb.Blocks.GroupScheduling
         private static class PageParameterKey
         {
             public const string GroupIds = "GroupIds";
+            public const string IncludeChildGroups = "IncludeChildGroups";
+
             public const string LocationIds = "LocationIds";
             public const string ScheduleIds = "ScheduleIds";
-            public const string IncludeChildGroups = "IncludeChildGroups";
         }
 
         #endregion PageParameterKeys
@@ -147,8 +146,20 @@ namespace RockWeb.Blocks.GroupScheduling
 
             if ( !this.IsPostBack )
             {
+                UpdateConfigurationFromUrl();
                 UpdateLiveRefreshConfiguration( this.GetAttributeValue( AttributeKey.EnableLiveRefresh ).AsBoolean() );
-                PopulateRoster();
+
+                RosterConfiguration rosterConfiguration = this.GetBlockUserPreference( UserPreferenceKey.RosterConfigurationJSON )
+                .FromJsonOrNull<RosterConfiguration>() ?? new RosterConfiguration();
+
+                if ( !rosterConfiguration.IsConfigured() )
+                {
+                    ShowConfigurationDialog();
+                }
+                else
+                {
+                    PopulateRoster();
+                }
             }
             else
             {
@@ -195,6 +206,45 @@ namespace RockWeb.Blocks.GroupScheduling
             lLiveUpdateDisabled.Visible = !enableLiveRefresh;
         }
 
+        /// <summary>
+        /// Updates the configuration from URL.
+        /// </summary>
+        private void UpdateConfigurationFromUrl()
+        {
+            /* 2020-07-21 MDP 
+  If PageParameters are used, we use the same behavior as the various Analytics blocks  which is
+    - Set UserPrefs from URL when first loaded, then Edit/Use/Save UserPrefs like usual
+*/
+            RosterConfiguration rosterConfiguration = this.GetBlockUserPreference( UserPreferenceKey.RosterConfigurationJSON )
+                .FromJsonOrNull<RosterConfiguration>() ?? new RosterConfiguration();
+
+            if ( this.PageParameter( PageParameterKey.GroupIds ).IsNotNullOrWhiteSpace() )
+            {
+                // if GroupIds is a page parameter, set GroupIds and IncludeChildGroups from the URL
+                rosterConfiguration.PickedGroupIds = this.PageParameter( PageParameterKey.GroupIds ).Split( ',' ).AsIntegerList().ToArray();
+            }
+
+            if ( this.PageParameter( PageParameterKey.IncludeChildGroups ).IsNotNullOrWhiteSpace() )
+            {
+                rosterConfiguration.IncludeChildGroups = this.PageParameter( PageParameterKey.IncludeChildGroups ).AsBoolean();
+            }
+
+            if ( this.PageParameter( PageParameterKey.LocationIds ).IsNotNullOrWhiteSpace() )
+            {
+                // if LocationIds is a page parameter, use that as the LocationIds
+                rosterConfiguration.LocationIds = this.PageParameter( PageParameterKey.LocationIds ).Split( ',' ).AsIntegerList().ToArray();
+            }
+
+            if ( this.PageParameter( PageParameterKey.ScheduleIds ).IsNotNullOrWhiteSpace() )
+            {
+                // if ScheduleIds is a page parameter, use that as the ScheduleIds
+                rosterConfiguration.ScheduleIds = this.PageParameter( PageParameterKey.ScheduleIds ).Split( ',' ).AsIntegerList().ToArray();
+            }
+
+            // just in case URL updated any configuration, save it back to user preferences
+            this.SetBlockUserPreference( UserPreferenceKey.RosterConfigurationJSON, rosterConfiguration.ToJson() );
+        }
+
         #endregion
 
         #region Events
@@ -226,36 +276,37 @@ namespace RockWeb.Blocks.GroupScheduling
 
         /// <summary>
         /// Populates the roster.
+        /// In cases where there won't be a postback, we can disable view state. The only time we need viewstate is when the Configuration Dialog
+        /// is showing.
         /// </summary>
         private void PopulateRoster( ViewStateMode viewStateMode = ViewStateMode.Disabled )
         {
             RosterConfiguration rosterConfiguration = this.GetBlockUserPreference( UserPreferenceKey.RosterConfigurationJSON )
-                .FromJsonOrNull<RosterConfiguration>();
+                .FromJsonOrNull<RosterConfiguration>() ?? new RosterConfiguration();
 
-            if ( rosterConfiguration == null || !rosterConfiguration.IsConfigured() )
+            if ( !rosterConfiguration.IsConfigured() )
             {
-                ShowConfigurationDialog();
                 return;
             }
 
             int[] scheduleIds = rosterConfiguration.ScheduleIds;
             int[] locationIds = rosterConfiguration.LocationIds;
-            List<int> parentGroupIds = rosterConfiguration.GroupIds.ToList();
+            List<int> pickedGroupIds = rosterConfiguration.PickedGroupIds.ToList();
 
             var allGroupIds = new List<int>();
-            allGroupIds.AddRange( parentGroupIds );
+            allGroupIds.AddRange( pickedGroupIds );
 
             var rockContext = new RockContext();
 
-            if ( rosterConfiguration.IncludeChildGroups )
+            // Only use teh ShowChildGroups option when there is 1 group selected
+            if ( rosterConfiguration.IncludeChildGroups && pickedGroupIds.Count == 1 )
             {
+                var parentGroupId = pickedGroupIds[0];
                 var groupService = new GroupService( rockContext );
-                foreach ( var groupId in parentGroupIds )
-                {
-                    // just the first level of child groups, not all decendants
-                    var childGroupIds = groupService.Queryable().Where( a => a.ParentGroupId == groupId ).Select( a => a.Id ).ToList();
+
+                // just the first level of child groups, not all decendants
+                var childGroupIds = groupService.Queryable().Where( a => a.ParentGroupId == parentGroupId ).Select( a => a.Id ).ToList();
                     allGroupIds.AddRange( childGroupIds );
-                }
             }
 
             allGroupIds = allGroupIds.Distinct().ToList();
@@ -315,7 +366,7 @@ namespace RockWeb.Blocks.GroupScheduling
                 var scheduleDate = attendanceOccurrence.Schedule.GetNextStartDateTime( attendanceOccurrence.OccurrenceDate );
                 var scheduledIndividuals = confirmedScheduledIndividualsForOccurrenceId.GetValueOrNull( attendanceOccurrence.Id );
 
-                if ( ( scheduleDate == null || scheduleDate.Value.Date != attendanceOccurrence.OccurrenceDate ) )
+                if ( ( scheduleDate == null ) || ( scheduleDate.Value.Date != attendanceOccurrence.OccurrenceDate ) )
                 {
                     // scheduleDate can be later than the OccurrenceDate (or null) if there are exclusions that cause the schedule
                     // to not occur on the occurrence date. In this case, don't show the roster unless there are somehow individuals
@@ -385,10 +436,10 @@ namespace RockWeb.Blocks.GroupScheduling
                 rosterConfiguration = new RosterConfiguration();
             }
 
-            gpGroups.SetValues( rosterConfiguration.GroupIds ?? new int[0] );
+            gpGroups.SetValues( rosterConfiguration.PickedGroupIds ?? new int[0] );
             cbIncludeChildGroups.Checked = rosterConfiguration.IncludeChildGroups;
+            UpdateIncludeChildGroupsVisibility();
 
-            // 
             UpdateScheduleList();
             lbSchedules.SetValues( rosterConfiguration.ScheduleIds ?? new int[0] );
 
@@ -397,9 +448,19 @@ namespace RockWeb.Blocks.GroupScheduling
 
             cbDisplayRole.Checked = rosterConfiguration.DisplayRole;
 
-
-
             mdRosterConfiguration.Show();
+        }
+
+        /// <summary>
+        /// Updates the include child groups visibility based on if there is only one Group selected, and if that group has child groups
+        /// </summary>
+        private void UpdateIncludeChildGroupsVisibility()
+        {
+            var pickerGroupIds = gpGroups.SelectedIds.ToList();
+            bool showChildGroupsCheckbox =
+                pickerGroupIds.Count == 1
+                && new GroupService( new RockContext() ).Queryable().Where( a => a.ParentGroupId.HasValue && pickerGroupIds.Contains( a.ParentGroupId.Value ) ).Any();
+            cbIncludeChildGroups.Visible = showChildGroupsCheckbox;
         }
 
         /// <summary>
@@ -407,6 +468,7 @@ namespace RockWeb.Blocks.GroupScheduling
         /// </summary>
         private void UpdateListsForSelectedGroups()
         {
+            UpdateIncludeChildGroupsVisibility();
             UpdateScheduleList();
             UpdateLocationListFromSelectedSchedules();
         }
@@ -416,18 +478,20 @@ namespace RockWeb.Blocks.GroupScheduling
         /// </summary>
         private void UpdateScheduleList()
         {
-            var rockContext = new RockContext();
-            var includedGroupsQuery = GetSelectedGroupsQuery( rockContext );
+            var pickedGroupIds = gpGroups.SelectedIds;
 
             nbGroupWarning.Visible = false;
             nbLocationsWarning.Visible = false;
 
-            if ( !includedGroupsQuery.Any() )
+            if ( !pickedGroupIds.Any() )
             {
                 nbGroupWarning.Text = "Select at least one group.";
                 nbGroupWarning.Visible = true;
                 return;
             }
+
+            var rockContext = new RockContext();
+            var includedGroupsQuery = GetSelectedSchedulingGroupsQuery( rockContext );
 
             var groupSchedulesQuery = includedGroupsQuery.GetGroupSchedulingSchedules();
             var groupSchedulesList = groupSchedulesQuery.AsNoTracking().ToList();
@@ -469,10 +533,10 @@ namespace RockWeb.Blocks.GroupScheduling
         }
 
         /// <summary>
-        /// Returns a queryable of the selected groups
+        /// Returns a queryable of the selected groups that have scheduling enabled
         /// </summary>
         /// <returns></returns>
-        private IQueryable<Group> GetSelectedGroupsQuery( RockContext rockContext )
+        private IQueryable<Group> GetSelectedSchedulingGroupsQuery( RockContext rockContext )
         {
             GroupService groupService;
             int[] selectedGroupIds = gpGroups.SelectedValues.AsIntegerList().ToArray();
@@ -515,7 +579,7 @@ namespace RockWeb.Blocks.GroupScheduling
             }
 
             var rockContext = new RockContext();
-            var includedGroupsQuery = GetSelectedGroupsQuery( rockContext );
+            var includedGroupsQuery = GetSelectedSchedulingGroupsQuery( rockContext );
 
             var groupLocationService = new GroupLocationService( rockContext );
 
@@ -527,7 +591,7 @@ namespace RockWeb.Blocks.GroupScheduling
             var locationList = groupLocationsQuery.Select( a => a.Location )
                 .AsNoTracking()
                 .ToList()
-                .Distinct()
+                .DistinctBy( a => a.Id )
                 .OrderBy( a => a.ToString() ).ToList();
 
             // get any of the currently location ids, and reselect them if they still exist
@@ -564,7 +628,7 @@ namespace RockWeb.Blocks.GroupScheduling
                 rosterConfiguration = new RosterConfiguration();
             }
 
-            rosterConfiguration.GroupIds = gpGroups.SelectedValuesAsInt().ToArray();
+            rosterConfiguration.PickedGroupIds = gpGroups.SelectedValuesAsInt().ToArray();
             rosterConfiguration.IncludeChildGroups = cbIncludeChildGroups.Checked;
             rosterConfiguration.LocationIds = cblLocations.SelectedValuesAsInt.ToArray();
             rosterConfiguration.ScheduleIds = lbSchedules.SelectedValuesAsInt.ToArray();
@@ -613,7 +677,7 @@ namespace RockWeb.Blocks.GroupScheduling
 
         public class RosterConfiguration : RockDynamic
         {
-            public int[] GroupIds { get; set; }
+            public int[] PickedGroupIds { get; set; }
 
             // just the first level of child groups (not all descendants)
             public bool IncludeChildGroups { get; set; }
@@ -626,24 +690,31 @@ namespace RockWeb.Blocks.GroupScheduling
 
             public bool IsConfigured()
             {
-                return GroupIds != null && LocationIds != null && ScheduleIds != null;
+                return PickedGroupIds != null && LocationIds != null && ScheduleIds != null;
             }
         }
 
         public class ScheduledIndividual : RockDynamic
         {
             public ScheduledAttendanceItemStatus ScheduledAttendanceItemStatus { get; set; }
+
             public Person Person { get; set; }
+
             public GroupMember GroupMember { get; set; }
+
             public bool CurrentlyCheckedIn { get; set; }
         }
 
         private class OccurrenceRosterInfo : RockDynamic
         {
             public Group Group { get; set; }
+
             public Location Location { get; set; }
+
             public Schedule Schedule { get; set; }
+
             public DateTime? ScheduleDate { get; set; }
+
             public List<ScheduledIndividual> ScheduledIndividuals { get; set; }
         }
 
