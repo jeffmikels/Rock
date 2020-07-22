@@ -46,6 +46,8 @@ namespace Rock.Oidc
                 // Register a new ephemeral key, that is discarded when the application
                 // shuts down. Tokens signed using this key are automatically invalidated.
                 // This method should only be used during development.
+                // TODO: Try using the unique Rock encryption key
+                // Maybe something like: options.SigningCredentials.AddCertificate("7D2A741FE34CC2C7369237A5F2078988E17A6A75");
                 options.SigningCredentials.AddEphemeralKey();
 
                 // Note: to override the default access token format and use JWT, assign AccessTokenHandler:
