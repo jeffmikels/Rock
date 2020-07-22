@@ -18,7 +18,7 @@
                     <div class="grid grid-panel">
 
                         <Rock:GridFilter ID="fSchedules" runat="server">
-                            <Rock:CategoryPicker ID="cpCategoryFilter" runat="server" AllowCategorySelection="true" AllowMultiSelect="false" />
+                            <Rock:CategoryPicker ID="cpCategoryFilter" runat="server" Label="Category" AllowCategorySelection="true" AllowMultiSelect="false" />
                             <Rock:RockDropDownList ID="ddlActiveFilter" runat="server" Label="Active Status">
                                 <asp:ListItem Text="[All]" Value="all"></asp:ListItem>
                                 <asp:ListItem Text="Active" Value="True"></asp:ListItem>
