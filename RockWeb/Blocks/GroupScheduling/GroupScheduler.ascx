@@ -25,15 +25,50 @@
                     </button>
 
                     <asp:HiddenField ID="hfDisplayedOccurrenceIds" runat="server" />
-                    <asp:LinkButton ID="btnSendNow" runat="server" CssClass="js-sendnow btn btn-default btn-xs" OnClick="btnSendNow_Click">
+                    
+                    <asp:LinkButton ID="btnSendNowSingleGroupMode" runat="server" CssClass="js-sendnow btn btn-default btn-xs" OnClick="btnSendNowSelectedGroup_Click">
                         <i class="fa fa-envelope"></i>
                         Send Now
                     </asp:LinkButton>
+
+                    <asp:Panel ID="pnlSendNowMultiGroupMode" runat="server" class="btn-group" >
+                        <div class="dropdown-toggle btn btn-xs" data-toggle="dropdown">
+                            <i class="fa fa-envelope"></i>
+                            Send Now
+                        </div>
+
+                        <ul class="dropdown-menu" role="menu">
+                            <li>
+                                <asp:LinkButton ID="btnSendNowSelectedGroup" runat="server" Text="Send to Selected Group" OnClick="btnSendNowSelectedGroup_Click" />
+                            </li>
+                            <li>
+                                <asp:LinkButton ID="btnSendNowAllGroups" runat="server" Text="Send to All Groups" OnClick="btnSendNowAllGroups_Click"/>
+                            </li>
+                        </ul>
+                    </asp:Panel>
                     <Rock:ModalAlert ID="maSendNowResults" runat="server" />
-                    <asp:LinkButton ID="btnAutoSchedule" runat="server" CssClass="js-autoschedule btn btn-default btn-xs" OnClick="btnAutoSchedule_Click">
+                    
+                    
+                    <asp:LinkButton ID="btnAutoScheduleSingleGroupMode" runat="server" CssClass="js-autoschedule btn btn-default btn-xs" OnClick="btnAutoScheduleSelectedGroup_Click">
                         <i class="fa fa-magic"></i>
                         Auto Schedule
                     </asp:LinkButton>
+
+                    <asp:Panel ID="pnlAutoScheduleMultiGroupMode" runat="server" class="btn-group" >
+                        <div class="dropdown-toggle btn btn-xs" data-toggle="dropdown">
+                            <i class="fa fa-magic"></i>
+                            Auto Schedule
+                        </div>
+
+                        <ul class="dropdown-menu" role="menu">
+                            <li>
+                                <asp:LinkButton ID="btnAutoScheduleSelectedGroup" runat="server" Text="Schedule Selected Group" OnClick="btnAutoScheduleSelectedGroup_Click"/>
+                            </li>
+                            <li>
+                                <asp:LinkButton ID="btnAutoScheduleAllGroups" runat="server" Text="Schedule  All Groups" OnClick="btnAutoScheduleAllGroups_Click"/>
+                            </li>
+                        </ul>
+                    </asp:Panel>
                 </div>
             </div>
 
@@ -314,6 +349,10 @@
                                                         <li>
                                                             <button type="button" class="dropdown-item btn-link js-resendconfirmation">Resend Confirmation</button>
                                                         </li>
+
+                                                        <li>
+                                                            <button type="button" class="dropdown-item btn-link js-update-preference">Update Preference</button>
+                                                        </li>
                                                     </ul>
                                                 </div>
                                             </div>
@@ -392,6 +431,10 @@
                                                                             <%-- Occurrence Panel Heading when in Single-Group mode --%>
                                                                             <asp:Panel ID="pnlSingleGroupModePanelHeading" runat="server">
                                                                                 <asp:Literal ID="lSingleGroupModeLocationTitle" runat="server" />
+
+                                                                                <span class="autoscheduler-warning js-autoscheduler-warning" data-original-title="Auto Schedule requires a desired capacity for this location.">
+                                                                                        <i class="fa fa-exclamation-triangle"></i>
+                                                                                    </span>
                                                                             </asp:Panel>
                                                                     </div>
 

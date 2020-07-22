@@ -7,13 +7,13 @@ namespace Rock.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.1.3-40302")]
-    public sealed partial class ScheduleOrder : IMigrationMetadata
+    public sealed partial class GroupSchedulingV2 : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(ScheduleOrder));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(GroupSchedulingV2));
         
         string IMigrationMetadata.Id
         {
-            get { return "202007102149349_ScheduleOrder"; }
+            get { return "202007212203253_GroupSchedulingV2"; }
         }
         
         string IMigrationMetadata.Source

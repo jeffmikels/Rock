@@ -1004,11 +1004,14 @@ btnCopyToClipboard.ClientID );
 
             if ( !occurrenceSchedules.Any() )
             {
-                btnAutoSchedule.Visible = false;
+                pnlAutoScheduleMultiGroupMode.Visible = false;
+                btnAutoScheduleSingleGroupMode.Visible = false;
                 return;
             }
 
-            btnAutoSchedule.Visible = true;
+            pnlAutoScheduleMultiGroupMode.Visible = true;
+            btnAutoScheduleSingleGroupMode.Visible = true;
+
             var scheduleOccurrenceDatesLookupByScheduleId = new Dictionary<int, List<DateTime>>();
 
             foreach ( var occurrenceSchedule in occurrenceSchedules )
@@ -1096,8 +1099,13 @@ btnCopyToClipboard.ClientID );
             }
             else
             {
-                occurrenceDisplayMode = OccurrenceDisplayMode.ScheduleOccurrenceDate;
+                occurrenceDisplayMode = OccurrenceDisplayMode.SingleGroup;
             }
+
+            pnlSendNowMultiGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
+            btnSendNowSingleGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
+            pnlAutoScheduleMultiGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
+            btnAutoScheduleSingleGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
 
             var attendanceOccurrencesList = attendanceOccurrenceGroupLocationScheduleConfigQuery.AsNoTracking()
                 .Select( a => new AttendanceOccurrenceRowItem
@@ -1144,20 +1152,6 @@ btnCopyToClipboard.ClientID );
                 .ToList()
                 .OrderBy( a => a.ScheduledDateTime )
                 .ToList();
-
-            // TODO: just in case we decide to do this
-            int? maxOccurrences = null;
-            if ( maxOccurrences.HasValue && attendanceOccurrencesOrderedList.Count > maxOccurrences )
-            {
-                nbFilterMessage.Visible = true;
-                nbFilterMessage.NotificationBoxType = NotificationBoxType.Warning;
-                nbFilterMessage.Text = string.Format(
-                    "There are {0} attendance occurrences for selected filter. Please change the filter so that less than {1} occurrences are shown.",
-                    attendanceOccurrencesOrderedList.Count,
-                    maxOccurrences );
-
-                return;
-            }
 
             attendanceOccurrencesOrderedList.InsertRange( 0, unassignedLocationOccurrenceList );
 
@@ -1262,7 +1256,14 @@ btnCopyToClipboard.ClientID );
         /// </summary>
         public enum OccurrenceDisplayMode
         {
-            ScheduleOccurrenceDate,
+            /// <summary>
+            /// Single Group, so each column is an Schedule/Day
+            /// </summary>
+            SingleGroup,
+
+            /// <summary>
+            ///  Multi Group, so each column is a Group
+            /// </summary>
             MultiGroup
         }
 
@@ -1424,7 +1425,7 @@ btnCopyToClipboard.ClientID );
 
             OccurrenceColumnItem occurrenceColumnItem = e.Item.DataItem as OccurrenceColumnItem;
             pnlMultiGroupModeColumnHeading.Visible = occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
-            pnlSingleGroupModeColumnHeading.Visible = occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.ScheduleOccurrenceDate;
+            pnlSingleGroupModeColumnHeading.Visible = occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
             var columnCssClasses = new List<string>();
             columnCssClasses.Add( "board-column" );
             columnCssClasses.Add( "occurrence-column" );
@@ -1466,7 +1467,7 @@ btnCopyToClipboard.ClientID );
 
                 btnMultiGroupModeColumnSelectedGroup.Attributes["data-group-id"] = occurrenceColumnItem.Group.Id.ToString();
             }
-            else if ( occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.ScheduleOccurrenceDate )
+            else if ( occurrenceColumnItem.OccurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup )
             {
                 columnCssClasses.Add( "occurrence-column-schedule" );
 
@@ -1765,15 +1766,51 @@ btnCopyToClipboard.ClientID );
         }
 
         /// <summary>
-        /// Handles the Click event of the btnAutoSchedule control.
+        /// Handles the Click event of the btnAutoScheduleAllGroups control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void btnAutoSchedule_Click( object sender, EventArgs e )
+        protected void btnAutoScheduleAllGroups_Click( object sender, EventArgs e )
+        {
+            List<Group> autoScheduleGroups = GetAuthorizedListedGroups();
+            AutoSchedule( autoScheduleGroups );
+        }
+
+        /// <summary>
+        /// Handles the Click event of the btnAutoScheduleSelectedGroup and btnAutoScheduleSingleGroupMode control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnAutoScheduleSelectedGroup_Click( object sender, EventArgs e )
+        {
+            List<Group> autoScheduleGroups = new List<Group>();
+            var currentlySelectedGroup = GetCurrentlySelectedGroup();
+            if ( currentlySelectedGroup != null )
+            {
+                autoScheduleGroups.Add( currentlySelectedGroup );
+            }
+
+            AutoSchedule( autoScheduleGroups );
+        }
+
+        /// <summary>
+        /// Auto-Schedules for the selected groups
+        /// </summary>
+        /// <param name="groups">The groups.</param>
+        protected void AutoSchedule( List<Group> groups )
         {
             var rockContext = new RockContext();
 
-            var attendanceOccurrenceIdList = hfDisplayedOccurrenceIds.Value.SplitDelimitedValues().AsIntegerList();
+            var displayedAttendanceOccurrenceIdList = hfDisplayedOccurrenceIds.Value.SplitDelimitedValues().AsIntegerList();
+            var groupIds = groups.Select( a => a.Id ).ToList();
+
+            var attendanceOccurrenceIdList = new AttendanceOccurrenceService( rockContext )
+                .Queryable()
+                .Where( a =>
+                     a.GroupId.HasValue
+                     && displayedAttendanceOccurrenceIdList.Contains( a.Id )
+                     && groupIds.Contains( a.GroupId.Value )
+                ).Select( a => a.Id ).ToList();
 
             var attendanceService = new AttendanceService( rockContext );
 
@@ -1783,15 +1820,51 @@ btnCopyToClipboard.ClientID );
         }
 
         /// <summary>
+        /// Handles the Click event of the btnSendNowAllGroups control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnSendNowAllGroups_Click( object sender, EventArgs e )
+        {
+            List<Group> sendToGroups = GetAuthorizedListedGroups();
+            SendConfirmationEmails( sendToGroups );
+        }
+
+        /// <summary>
         /// Handles the Click event of the btnSendNow control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void btnSendNow_Click( object sender, EventArgs e )
+        protected void btnSendNowSelectedGroup_Click( object sender, EventArgs e )
         {
+            List<Group> sendToGroups = new List<Group>();
+            var currentlySelectedGroup = GetCurrentlySelectedGroup();
+            if ( currentlySelectedGroup != null )
+            {
+                sendToGroups.Add( currentlySelectedGroup );
+            }
+
+            SendConfirmationEmails( sendToGroups );
+        }
+
+        /// <summary>
+        /// Sends the confirmation emails to the specified groups
+        /// </summary>
+        /// <param name="groups">The groups.</param>
+        protected void SendConfirmationEmails( List<Group> groups )
+        { 
             var rockContext = new RockContext();
 
-            var attendanceOccurrenceIdList = hfDisplayedOccurrenceIds.Value.SplitDelimitedValues().AsIntegerList();
+            var displayedAttendanceOccurrenceIdList = hfDisplayedOccurrenceIds.Value.SplitDelimitedValues().AsIntegerList();
+            var groupIds = groups.Select( a => a.Id ).ToList();
+
+            var attendanceOccurrenceIdList = new AttendanceOccurrenceService( rockContext )
+                .Queryable()
+                .Where( a =>
+                     a.GroupId.HasValue
+                     && displayedAttendanceOccurrenceIdList.Contains( a.Id )
+                     && groupIds.Contains( a.GroupId.Value )
+                ).Select( a => a.Id ).ToList();
 
             var attendanceService = new AttendanceService( rockContext );
             var sendConfirmationAttendancesQuery = attendanceService.GetPendingScheduledConfirmations()
@@ -2010,5 +2083,9 @@ btnCopyToClipboard.ClientID );
         #endregion Events
 
 
+
+
+
+        
     }
 }

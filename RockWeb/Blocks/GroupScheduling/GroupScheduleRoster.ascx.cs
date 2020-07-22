@@ -96,6 +96,10 @@ namespace RockWeb.Blocks.GroupScheduling
 
             public const string LocationIds = "LocationIds";
             public const string ScheduleIds = "ScheduleIds";
+
+            // by default, the roster only shows for the current date, but this can override that
+            public const string OccurrenceDate = "OccurrenceDate";
+
         }
 
         #endregion PageParameterKeys
@@ -313,7 +317,12 @@ namespace RockWeb.Blocks.GroupScheduling
 
             var attendanceOccurrenceService = new AttendanceOccurrenceService( rockContext );
 
-            var currentDate = RockDateTime.Today;
+            // An OccurrenceDate probably won't be included in the URL, but just in case
+            DateTime? occurrenceDate = this.PageParameter( PageParameterKey.OccurrenceDate ).AsDateTime();
+            if ( !occurrenceDate.HasValue )
+            {
+                occurrenceDate = RockDateTime.Today;
+            }
 
             // only show occurrences for the current day
             var attendanceOccurrenceQuery = attendanceOccurrenceService
@@ -323,7 +332,7 @@ namespace RockWeb.Blocks.GroupScheduling
                 .Where( a => allGroupIds.Contains( a.GroupId.Value ) )
                 .Where( a => locationIds.Contains( a.LocationId.Value ) )
                 .Where( a => scheduleIds.Contains( a.ScheduleId.Value ) )
-                .Where( a => a.OccurrenceDate == currentDate );
+                .Where( a => a.OccurrenceDate == occurrenceDate );
 
             // limit attendees to ones that schedules (or are checked-in regardless of being scheduled)
             var confirmedAttendancesForOccurrenceQuery = attendanceOccurrenceQuery
@@ -393,6 +402,7 @@ namespace RockWeb.Blocks.GroupScheduling
             var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage );
             mergeFields.Add( "OccurrenceList", occurrenceRosterInfoList );
             mergeFields.Add( "DisplayRole", rosterConfiguration.DisplayRole );
+            mergeFields.Add( "OccurrenceDate", occurrenceDate );
             var rosterLavaTemplate = this.GetAttributeValue( AttributeKey.RosterLavaTemplate );
 
             var rosterHtml = rosterLavaTemplate.ResolveMergeFields( mergeFields );

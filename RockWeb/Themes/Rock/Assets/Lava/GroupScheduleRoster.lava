@@ -3,6 +3,7 @@
    Available Lava Fields:
 
    + DisplayRole (boolean on whether the members role should be displayed)
+   + OccurrenceDate - the date that this Roster is for, which would be the current date
    + OccurrenceList
      + Group
      + ScheduleDate
@@ -38,7 +39,7 @@
 {% assign occurrenceCount = OccurrenceList | Size %}
 {% if occurrenceCount == 0 %}
   <div class='alert alert-warning'>
-      No occurrences for the selected group options.
+      No occurrences on {{ OccurrenceDate | Date:'dddd MMMM d, yyyy ' }} for the selected group options.
   </div>
 {% endif %}
 
