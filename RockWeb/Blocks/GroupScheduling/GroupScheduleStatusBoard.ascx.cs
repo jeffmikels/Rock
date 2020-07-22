@@ -290,7 +290,7 @@ namespace RockWeb.Blocks.GroupScheduling
 <th></th>
 <th colspan='{0}'>
     <i class='fa fa-chevron-down js-toggle-panel'></i> {1}
-    <a href='{2}' class='btn btn-link text-color js-group-scheduler-link'><i class='{3}'></i></a>
+    <a href='{2}' class='ml-1 text-color js-group-scheduler-link'><i class='{3}'></i></a>
 </th>",
                         columnsCount - 1, // {0}
                         group.Name, // {1}
