@@ -24,7 +24,7 @@
                 </ul>
 
                 <div class="actions">
-                    <asp:LinkButton ID="btnAllow" runat="server" Text="Yes" CssClass="btn btn-primary" OnClick="btnAllow_Click" />
+                    <asp:LinkButton ID="btnAccept" runat="server" Text="Yes" CssClass="btn btn-success" OnClick="btnAllow_Click" />
                     <asp:LinkButton ID="btnDeny" runat="server" Text="No" CssClass="btn btn-default" OnClick="btnDeny_Click" />
                 </div>
             </div>
