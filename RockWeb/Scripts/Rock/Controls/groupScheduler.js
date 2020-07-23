@@ -486,9 +486,17 @@
                 $resourceDiv.attr('data-has-requirements-conflict', schedulerResource.HasGroupRequirementsConflict);
                 var $resourceMeta = $resourceDiv.find('.js-resource-meta');
 
+                // if the person is a member of the occurrence group, we can show their role and set the groupmember-id
                 if (schedulerResource.GroupRole) {
                     var $resourceMemberRole = $resourceDiv.find('.js-resource-member-role');
                     $resourceMemberRole.append('<span>' + schedulerResource.GroupRole.Name + '</span>');
+                }
+
+                if (schedulerResource.GroupMemberId) {
+                    $resourceDiv.attr('data-groupmember-id', schedulerResource.GroupMemberId);
+                }
+                else {
+                    $resourceDiv.find('.js-update-preference').hide();
                 }
 
                 if (schedulerResource.ResourceAssignments) {

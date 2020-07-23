@@ -2286,7 +2286,7 @@ namespace Rock.Model
         public bool? IsAlreadyScheduledForGroup { get; set; }
 
         /// <summary>
-        /// Gets or sets the group role.
+        /// Gets or sets the group role, if the Person is a member of the Occurrence Group
         /// </summary>
         /// <value>
         /// The group role.

@@ -149,6 +149,46 @@ btnCopyToClipboard.ClientID );
                 LoadFilterFromUserPreferencesOrURL();
                 ApplyFilter();
             }
+            else
+            {
+                HandleCustomPostbackEvents();
+            }
+        }
+
+        /// <summary>
+        /// Handles the custom postback events.
+        /// </summary>
+        private void HandleCustomPostbackEvents()
+        {
+            string postbackArgs = Request.Params["__EVENTARGUMENT"];
+            if ( !string.IsNullOrWhiteSpace( postbackArgs ) )
+            {
+                //var postbackArgument = 'update-preference|attendanceId:' + attendanceId|groupMemberId: + groupMemberId;
+                var postbackArgsParts = postbackArgs.Split( '|' );
+                if ( postbackArgsParts.Length == 3 && postbackArgsParts[0] == "update-preference" )
+                {
+                    var attendanceParameterParts = postbackArgsParts[1].Split( ':' );
+                    int? attendanceId = null;
+
+                    if ( attendanceParameterParts.Length == 2 && attendanceParameterParts[0] == "attendanceId" )
+                    {
+                        attendanceId = attendanceParameterParts[1].AsIntegerOrNull();
+                    }
+
+                    var groupMemberParameterParts = postbackArgsParts[2].Split( ':' );
+                    int? groupMemberId = null;
+
+                    if ( groupMemberParameterParts.Length == 2 && groupMemberParameterParts[0] == "groupMemberId" )
+                    {
+                        groupMemberId = groupMemberParameterParts[1].AsIntegerOrNull();
+                    }
+
+                    if ( attendanceId.HasValue && groupMemberId.HasValue )
+                    {
+                        UpdateGroupScheduleAssignmentPreference( attendanceId.Value, groupMemberId.Value );
+                    }
+                }
+            }
         }
 
         #endregion Base Control Methods
@@ -1852,7 +1892,7 @@ btnCopyToClipboard.ClientID );
         /// </summary>
         /// <param name="groups">The groups.</param>
         protected void SendConfirmationEmails( List<Group> groups )
-        { 
+        {
             var rockContext = new RockContext();
 
             var displayedAttendanceOccurrenceIdList = hfDisplayedOccurrenceIds.Value.SplitDelimitedValues().AsIntegerList();
@@ -2080,12 +2120,124 @@ btnCopyToClipboard.ClientID );
             ApplyFilter();
         }
 
+        /// <summary>
+        /// Updates the group schedule assignment preference.
+        /// </summary>
+        /// <param name="attendanceId">The attendance identifier.</param>
+        /// <param name="groupMemberId">The group member identifier.</param>
+        protected void UpdateGroupScheduleAssignmentPreference( int attendanceId, int groupMemberId )
+        {
+            var rockContext = new RockContext();
+            GroupMemberService groupMemberService = new GroupMemberService( rockContext );
+            AttendanceService attendanceService = new AttendanceService( rockContext );
+            var groupMember = groupMemberService.Get( groupMemberId );
+            var attendanceOccurrence = attendanceService.GetSelect( attendanceId, s => s.Occurrence );
+
+            if ( attendanceOccurrence == null || groupMember == null )
+            {
+                return;
+            }
+
+            var scheduleId = attendanceOccurrence.ScheduleId;
+            var locationId = attendanceOccurrence.LocationId;
+
+            GroupMemberAssignmentService groupMemberAssignmentService = new GroupMemberAssignmentService( rockContext );
+            var groupMemberAssignmentQuery = groupMemberAssignmentService.Queryable();
+
+            var preferenceForSchedule = groupMemberAssignmentQuery
+                .Where( a =>
+                    a.GroupMemberId == groupMemberId
+                    && a.ScheduleId == scheduleId
+                    ).FirstOrDefault();
+
+            nbGroupScheduleAssignmentWarning.Visible = false;
+
+            if ( preferenceForSchedule != null )
+            {
+                if ( preferenceForSchedule.LocationId == locationId )
+                {
+                    nbGroupScheduleAssignmentWarning.Visible = true;
+                    nbGroupScheduleAssignmentWarning.Text = "This person already has this location as their preference for this schedule";
+                }
+                else
+                {
+                    nbGroupScheduleAssignmentWarning.Visible = true;
+                    nbGroupScheduleAssignmentWarning.Text = "This person already has a preference for the same schedule";
+                }
+            }
+
+
+            hfGroupScheduleAssignmentGroupMemberId.Value = groupMemberId.ToString();
+            hfGroupScheduleAssignmentLocationId.Value = locationId.ToString();
+            hfGroupScheduleAssignmentScheduleId.Value = scheduleId.ToString();
+
+            mdGroupScheduleAssignmentPreference.Show();
+        }
+
+        /// <summary>
+        /// Handles the SaveClick event of the mdGroupScheduleAssignmentPreference control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void mdGroupScheduleAssignmentPreference_SaveClick( object sender, EventArgs e )
+        {
+            mdGroupScheduleAssignmentPreference.Hide();
+            var groupMemberId = hfGroupScheduleAssignmentGroupMemberId.Value.AsIntegerOrNull();
+            var locationId = hfGroupScheduleAssignmentLocationId.Value.AsIntegerOrNull();
+            var scheduleId = hfGroupScheduleAssignmentScheduleId.Value.AsIntegerOrNull();
+
+            var rockContext = new RockContext();
+
+            GroupMemberAssignmentService groupMemberAssignmentService = new GroupMemberAssignmentService( rockContext );
+            var groupMemberAssignmentQuery = groupMemberAssignmentService.Queryable();
+
+            if ( !locationId.HasValue || !scheduleId.HasValue || !groupMemberId.HasValue )
+            {
+                // shouldn't happen
+                return;
+            }
+
+            var locationPreferenceForSchedule = groupMemberAssignmentQuery
+                .Where( a =>
+                    a.GroupMemberId == groupMemberId.Value
+                    && a.ScheduleId.HasValue
+                    && a.ScheduleId == scheduleId.Value ).FirstOrDefault();
+
+            if ( locationPreferenceForSchedule == null )
+            {
+                locationPreferenceForSchedule = new GroupMemberAssignment();
+                locationPreferenceForSchedule.GroupMemberId = groupMemberId.Value;
+                locationPreferenceForSchedule.ScheduleId = scheduleId.Value;
+                groupMemberAssignmentService.Add( locationPreferenceForSchedule );
+            }
+
+            locationPreferenceForSchedule.LocationId = locationId.Value;
+
+
+            if ( rblGroupScheduleAssignmentUpdateOption.SelectedValue == "UpdatePreference" )
+            {
+                // TODO: remove all other schedule preferences ???
+                var otherPreferencesForGroup = groupMemberAssignmentQuery
+                    .Where( a =>
+                        a.GroupMemberId == groupMemberId.Value
+                        && a.ScheduleId != scheduleId.Value )
+                    .ToList();
+
+
+                if ( otherPreferencesForGroup.Any() )
+                {
+                    groupMemberAssignmentService.DeleteRange( otherPreferencesForGroup );
+                }
+
+            }
+            else if ( rblGroupScheduleAssignmentUpdateOption.SelectedValue == "AppendToPreference" )
+            {
+                // TODO: just add (replace) the preference for this schedule to be the selected location ???
+            } 
+
+            rockContext.SaveChanges();
+        }
+
         #endregion Events
-
-
-
-
-
-        
     }
 }

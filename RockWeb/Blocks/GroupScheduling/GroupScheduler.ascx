@@ -481,6 +481,20 @@
             </div>
         </asp:Panel>
 
+        <%-- Preferences Modal --%>
+                <Rock:ModalDialog ID="mdGroupScheduleAssignmentPreference" runat="server" OnSaveClick="mdGroupScheduleAssignmentPreference_SaveClick" Title="Update Preference" >
+                    <Content>
+                        <asp:HiddenField ID="hfGroupScheduleAssignmentGroupMemberId" runat="server" />
+                        <asp:HiddenField ID="hfGroupScheduleAssignmentScheduleId" runat="server" />
+                        <asp:HiddenField ID="hfGroupScheduleAssignmentLocationId" runat="server" />
+                        <Rock:RockRadioButtonList ID="rblGroupScheduleAssignmentUpdateOption" runat="server" RepeatDirection="Horizontal">
+                            <asp:ListItem Text="Update Preference" Value="UpdatePreference" Selected="true" />
+                            <asp:ListItem Text="Append to preference" Value="AppendToPreference" />
+                        </Rock:RockRadioButtonList>
+                        <Rock:NotificationBox ID="nbGroupScheduleAssignmentWarning" runat="server" NotificationBoxType="Warning" Visible="false" />
+                    </Content>
+                </Rock:ModalDialog>
+
         <script>
             Sys.Application.add_load(function () {
                 Rock.controls.fullScreen.initialize();
@@ -488,11 +502,6 @@
                 $('.js-add-resource').on('click', function () {
                     $('.js-add-resource-picker').slideToggle();
                 });
-
-                $('.js-location-label').on('click', function () {
-                    // NOTE: this is doing a postback because it gets applied automatically (there isn't a Apply Filter button)
-                    window.location = "javascript:__doPostBack('<%=upnlContent.ClientID %>', 'select-all-locations')";
-                })
 
                 // filter the search list when stuff is typed in the search box
                 $('.js-resource-search').on('keyup', function () {
@@ -547,6 +556,15 @@
 
                 Rock.controls.groupScheduler.initialize({
                     id: schedulerControlId,
+                });
+
+                $('#' + schedulerControlId).on('click', '.js-update-preference',  function (a, b, c) {
+                    var $resource = $(this).closest('.js-resource');
+                    var attendanceId = $resource.attr('data-attendance-id');
+                    var groupMemberId = $resource.attr('data-groupmember-id');
+                    var postbackArgument = 'update-preference|attendanceId:' + attendanceId + '|groupMemberId:' + groupMemberId;
+                    var postbackJs = "javascript:__doPostBack('<%=upnlContent.ClientID %>', '" + postbackArgument + "')";
+                    window.location = postbackJs;
                 });
             });
         </script>
