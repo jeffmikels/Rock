@@ -15,6 +15,7 @@
 // </copyright>
 //
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
@@ -187,7 +188,7 @@ namespace RockWeb.Blocks.Core
                 mergeFields.Add( "EntityType", entityType.FriendlyName );
                 mergeFields.Add( "LinkUrl", GetAttributeValue( AttributeKey.LinkUrl ) );
                 mergeFields.Add( "Quantity", quantity );
-                mergeFields.Add( "BlockId", this.BlockId);
+                mergeFields.Add( "BlockId", this.BlockId );
 
                 string template = GetAttributeValue( AttributeKey.LavaTemplate );
                 lContent.Text = template.ResolveMergeFields( mergeFields );
@@ -214,9 +215,9 @@ namespace RockWeb.Blocks.Core
                 if ( eventArgs.Length == 2 )
                 {
                     string action = eventArgs[0];
-                    var parameters = eventArgs[1].Split(',');
+                    var parameters = eventArgs[1].Split( ',' );
 
-                    if(parameters.Length != 2 )
+                    if ( parameters.Length != 2 )
                     {
                         return;
                     }
@@ -224,7 +225,7 @@ namespace RockWeb.Blocks.Core
                     var entityId = parameters[0].AsIntegerOrNull();
                     var blockId = parameters[1].AsIntegerOrNull();
 
-                    if(entityId == null || blockId != this.BlockId )
+                    if ( entityId == null || blockId != this.BlockId )
                     {
                         return;
                     }
@@ -246,22 +247,38 @@ namespace RockWeb.Blocks.Core
         private void DeleteFollowing( int entityId )
         {
             var entityType = EntityTypeCache.Get( GetAttributeValue( AttributeKey.EntityType ).AsGuid() );
-            int personId = this.CurrentPersonId.Value;
+            var personId = this.CurrentPersonId.Value;
 
-            RockContext rockContext = new RockContext();
-            var followingService = new FollowingService( rockContext );
-
-            var followings = followingService.Queryable()
-                        .Where( a => a.EntityTypeId == entityType.Id &&
-                        a.EntityId == entityId &&
-                        a.PersonAlias.PersonId == personId );
-
-            foreach ( var following in followings )
+            using ( var rockContext = new RockContext() )
             {
-                followingService.Delete( following );
-            }
+                List<int> entityIds = new List<int> { entityId };
 
-            rockContext.SaveChanges();
+                // If this is a person we need to use the Person Alias instead.
+                if ( entityType.Guid == Rock.SystemGuid.EntityType.PERSON.AsGuid() )
+                {
+                    entityIds = new PersonAliasService( rockContext )
+                        .Queryable()
+                        .Where( pa => pa.PersonId == entityId )
+                        .Select( pa => pa.Id )
+                        .ToList();
+
+                    entityType = EntityTypeCache.Get( Rock.SystemGuid.EntityType.PERSON_ALIAS.AsGuid() );
+                }
+
+                var followingService = new FollowingService( rockContext );
+
+                var followings = followingService.Queryable()
+                            .Where( a => a.EntityTypeId == entityType.Id )
+                            .Where( a => entityIds.Contains( a.EntityId ) )
+                            .Where( a => a.PersonAlias.PersonId == personId );
+
+                foreach ( var following in followings )
+                {
+                    followingService.Delete( following );
+                }
+
+                rockContext.SaveChanges();
+            }
 
             LoadContent();
         }
