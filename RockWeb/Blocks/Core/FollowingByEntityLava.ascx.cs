@@ -62,15 +62,22 @@ namespace RockWeb.Blocks.Core
 <div class=""panel-body"">
     <ul>
     {% for item in FollowingItems %}
+        {% assign deleteKey = item.Id | Append:',' | Append:BlockId %}
+
+        {% if EntityType == 'Person' %}
+            {% assign itemName = item.FullName %}
+        {% else %}
+            {% assign itemName = item.Name %}
+        {% endif %}
         {% if LinkUrl != '' %}
-            <li><a href=""{{ LinkUrl | Replace:'[Id]',item.Id }}"">{{ item.Name }}</a> 
-            <a class=""pull-right"" href = ""#"" onclick = ""{{ item.Id | Postback:'DeleteFollowing' }}"">
-            <i class=""fa fa-pencil""></i>
+            <li><a href=""{{ LinkUrl | Replace:'[Id]',item.Id }}"">{{ itemName }}</a> 
+            <a class=""pull-right"" href = ""#"" onclick = ""{{ deleteKey | Postback:'DeleteFollowing' }}"">
+            <i class=""fa fa-times""></i>
 			</a></li>
         {% else %}
-            <li>{{ item.Name }}
-            <a class=""pull-right"" href = ""#"" onclick = ""{{ item.Id | Postback:'DeleteFollowing' }}"">
-            <i class=""fa fa-pencil""></i>
+            <li>{{ itemName }}
+            <a class=""pull-right"" href = ""#"" onclick = ""{{ deleteKey | Postback:'DeleteFollowing' }}"">
+            <i class=""fa fa-times""></i>
 			</a></li>
         {% endif %}
     {% endfor %}
@@ -180,6 +187,7 @@ namespace RockWeb.Blocks.Core
                 mergeFields.Add( "EntityType", entityType.FriendlyName );
                 mergeFields.Add( "LinkUrl", GetAttributeValue( AttributeKey.LinkUrl ) );
                 mergeFields.Add( "Quantity", quantity );
+                mergeFields.Add( "BlockId", this.BlockId);
 
                 string template = GetAttributeValue( AttributeKey.LavaTemplate );
                 lContent.Text = template.ResolveMergeFields( mergeFields );
@@ -197,7 +205,6 @@ namespace RockWeb.Blocks.Core
         /// </summary>
         private void RouteAction()
         {
-            int entityId = 0;
             var sm = ScriptManager.GetCurrent( Page );
 
             if ( Request.Form["__EVENTARGUMENT"] != null )
@@ -207,16 +214,25 @@ namespace RockWeb.Blocks.Core
                 if ( eventArgs.Length == 2 )
                 {
                     string action = eventArgs[0];
-                    string parameters = eventArgs[1];
+                    var parameters = eventArgs[1].Split(',');
 
-                    int argument = 0;
-                    int.TryParse( parameters, out argument );
+                    if(parameters.Length != 2 )
+                    {
+                        return;
+                    }
+
+                    var entityId = parameters[0].AsIntegerOrNull();
+                    var blockId = parameters[1].AsIntegerOrNull();
+
+                    if(entityId == null || blockId != this.BlockId )
+                    {
+                        return;
+                    }
 
                     switch ( action )
                     {
                         case "DeleteFollowing":
-                            entityId = int.Parse( parameters );
-                            DeleteFollowing( entityId );
+                            DeleteFollowing( entityId.Value );
                             break;
                     }
                 }
@@ -236,7 +252,7 @@ namespace RockWeb.Blocks.Core
             var followingService = new FollowingService( rockContext );
 
             var followings = followingService.Queryable()
-                        .Where( a => a.EntityId == entityId &&
+                        .Where( a => a.EntityTypeId == entityType.Id &&
                         a.EntityId == entityId &&
                         a.PersonAlias.PersonId == personId );
 
