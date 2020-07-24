@@ -28,6 +28,7 @@ using Rock.Web.UI.Controls;
 using Rock.Security;
 using System.Collections.Generic;
 using Rock.Web.Cache;
+using Rock.Achievement;
 
 namespace RockWeb.Blocks.Streaks
 {
@@ -62,7 +63,7 @@ namespace RockWeb.Blocks.Streaks
             /// <summary>
             /// The streak type achievement type identifier
             /// </summary>
-            public const string StreakTypeAchievementTypeId = "StreakTypeAchievementTypeId";
+            public const string AchievementTypeId = "AchievementTypeId";
 
             /// <summary>
             /// The streak type identifier
@@ -87,7 +88,6 @@ namespace RockWeb.Blocks.Streaks
             gAchievements.DataKeyNames = new string[] { "Id" };
             gAchievements.Actions.ShowAdd = !GetAttributeValue( AttributeKey.DetailPage ).IsNullOrWhiteSpace();
             gAchievements.Actions.AddClick += gAchievements_Add;
-            gAchievements.GridReorder += gAchievements_GridReorder;
             gAchievements.GridRebind += gAchievements_GridRebind;
             gAchievements.RowItemText = "Achievement Type";
 
@@ -124,7 +124,7 @@ namespace RockWeb.Blocks.Streaks
         protected void gAchievements_Add( object sender, EventArgs e )
         {
             NavigateToLinkedPage( AttributeKey.DetailPage, new Dictionary<string, string> {
-                { PageParamKey.StreakTypeAchievementTypeId, default(int).ToString() },
+                { PageParamKey.AchievementTypeId, default(int).ToString() },
                 { PageParamKey.StreakTypeId, PageParameter( PageParamKey.StreakTypeId ) }
             } );
         }
@@ -136,7 +136,7 @@ namespace RockWeb.Blocks.Streaks
         /// <param name="e">The <see cref="RowEventArgs" /> instance containing the event data.</param>
         protected void gAchievements_Edit( object sender, RowEventArgs e )
         {
-            NavigateToLinkedPage( AttributeKey.DetailPage, PageParamKey.StreakTypeAchievementTypeId, e.RowKeyId );
+            NavigateToLinkedPage( AttributeKey.DetailPage, PageParamKey.AchievementTypeId, e.RowKeyId );
         }
 
         /// <summary>
@@ -146,38 +146,23 @@ namespace RockWeb.Blocks.Streaks
         /// <param name="e">The <see cref="RowEventArgs" /> instance containing the event data.</param>
         protected void gAchievements_Delete( object sender, RowEventArgs e )
         {
-            var rockContext = GetRockContext();
-            var streakTypeAchievementTypeService = GetAchievementTypeService();
-            var streakTypeAchievementType = streakTypeAchievementTypeService.Get( e.RowKeyId );
+            var rockContext = new RockContext();
+            var achievementTypeService = new AchievementTypeService( rockContext );
+            var achievementType = achievementTypeService.Get( e.RowKeyId );
 
-            if ( streakTypeAchievementType != null )
+            if ( achievementType != null )
             {
                 string errorMessage;
 
-                if ( !streakTypeAchievementTypeService.CanDelete( streakTypeAchievementType, out errorMessage ) )
+                if ( !achievementTypeService.CanDelete( achievementType, out errorMessage ) )
                 {
                     mdGridWarning.Show( errorMessage, ModalAlertType.Information );
                     return;
                 }
 
-                streakTypeAchievementTypeService.Delete( streakTypeAchievementType );
+                achievementTypeService.Delete( achievementType );
                 rockContext.SaveChanges();
             }
-
-            BindGrid();
-        }
-
-        /// <summary>
-        /// Handles the GridReorder event of the gAchievements control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="GridReorderEventArgs"/> instance containing the event data.</param>
-        private void gAchievements_GridReorder( object sender, GridReorderEventArgs e )
-        {
-            var rockContext = GetRockContext();
-            var streakTypeAchievementTypes = GetAchievementTypes();
-            GetAchievementTypeService().Reorder( streakTypeAchievementTypes.ToList(), e.OldIndex, e.NewIndex );
-            rockContext.SaveChanges();
 
             BindGrid();
         }
@@ -201,7 +186,7 @@ namespace RockWeb.Blocks.Streaks
         /// </summary>
         private void BindGrid()
         {
-            gAchievements.SetLinqDataSource( GetGridViewModels() );
+            gAchievements.DataSource = GetGridViewModels();
             gAchievements.DataBind();
 
             var streakTypeId = PageParameter( PageParamKey.StreakTypeId ).AsIntegerOrNull();
@@ -221,14 +206,14 @@ namespace RockWeb.Blocks.Streaks
         /// Gets the achievement types.
         /// </summary>
         /// <returns></returns>
-        private IOrderedQueryable<StreakTypeAchievementType> GetAchievementTypes()
+        private List<AchievementTypeCache> GetAchievementTypes()
         {
             var streakTypeId = PageParameter( PageParamKey.StreakTypeId ).AsIntegerOrNull();
 
-            return GetAchievementTypeService()
-                .Queryable()
+            return AchievementTypeCache.All()
                 .Where( stat => !streakTypeId.HasValue || stat.StreakTypeId == streakTypeId.Value )
-                .OrderBy( stat => stat.Id );
+                .OrderBy( stat => stat.Id )
+                .ToList();
         }
 
         /// <summary>
@@ -236,17 +221,58 @@ namespace RockWeb.Blocks.Streaks
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
         /// <returns></returns>
-        private IQueryable<AchievementTypeViewModel> GetGridViewModels()
+        private List<AchievementTypeViewModel> GetGridViewModels()
         {
-            return GetAchievementTypes().Select( stat => new AchievementTypeViewModel
+            return GetAchievementTypes().Select( at => new AchievementTypeViewModel
             {
-                Id = stat.Id,
-                ComponentName = stat.AchievementEntityType.FriendlyName,
-                IconCssClass = stat.AchievementIconCssClass,
-                StreakTypeName = stat.StreakType.Name,
-                Name = stat.Name,
-                IsActive = stat.IsActive
-            } );
+                Id = at.Id,
+                ComponentName = GetComponentName( at ),
+                IconCssClass = at.AchievementIconCssClass,
+                SourceName = GetSourceName( at ),
+                Name = at.Name,
+                IsActive = at.IsActive
+            } ).ToList();
+        }
+
+        /// <summary>
+        /// Gets the name of the component.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        private string GetComponentName( AchievementTypeCache achievementTypeCache )
+        {
+            return AchievementContainer.GetComponentName( achievementTypeCache.AchievementEntityType.Name );
+        }
+
+        /// <summary>
+        /// Gets the name of the source.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        private string GetSourceName( AchievementTypeCache achievementTypeCache )
+        {
+            var interactionComponentCache = achievementTypeCache.InteractionComponentCache;
+
+            if ( interactionComponentCache != null )
+            {
+                return interactionComponentCache.Name;
+            }
+
+            var streakTypeCache = achievementTypeCache.StreakTypeCache;
+
+            if ( streakTypeCache != null )
+            {
+                return streakTypeCache.Name;
+            }
+
+            var sourceEntityTypeCache = achievementTypeCache.SourceEntityTypeCache;
+
+            if ( sourceEntityTypeCache != null )
+            {
+                return string.Format( "Any {0}", sourceEntityTypeCache.FriendlyName );
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -260,42 +286,7 @@ namespace RockWeb.Blocks.Streaks
             lTitlePrefix.Text = streakTypeCache == null ? string.Empty : streakTypeCache.Name;
         }
 
-        #endregion        
-
-        #region Data Interface
-
-        /// <summary>
-        /// Get the rock context
-        /// </summary>
-        /// <returns></returns>
-        private RockContext GetRockContext()
-        {
-            if ( _rockContext == null )
-            {
-                _rockContext = new RockContext();
-            }
-
-            return _rockContext;
-        }
-        private RockContext _rockContext = null;
-
-        /// <summary>
-        /// Get the achievement type service
-        /// </summary>
-        /// <returns></returns>
-        private StreakTypeAchievementTypeService GetAchievementTypeService()
-        {
-            if ( _achievementTypeService == null )
-            {
-                var rockContext = GetRockContext();
-                _achievementTypeService = new StreakTypeAchievementTypeService( rockContext );
-            }
-
-            return _achievementTypeService;
-        }
-        private StreakTypeAchievementTypeService _achievementTypeService = null;
-
-        #endregion Data Interface
+        #endregion
 
         #region View Models
 
@@ -320,9 +311,9 @@ namespace RockWeb.Blocks.Streaks
             public bool IsActive { get; set; }
 
             /// <summary>
-            /// Gets or sets the name of the streak type.
+            /// Gets or sets the name of the source.
             /// </summary>
-            public string StreakTypeName { get; set; }
+            public string SourceName { get; set; }
 
             /// <summary>
             /// Gets or sets the icon CSS class.

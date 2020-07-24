@@ -31,38 +31,59 @@ using Rock.Web.Cache;
 namespace Rock.Rest.Controllers
 {
     /// <summary>
-    /// StreakTypeAchievementTypes REST API
+    /// AchievementTypes REST API
     /// </summary>
-    public partial class StreakTypeAchievementTypesController
+    public partial class AchievementTypesController
     {
         /// <summary>
-        /// Gets the progress for the person.
+        /// Gets the progress for the achiever.
         /// </summary>
-        /// <param name="personId">The person identifier. The current person is used if this is omitted.</param>
+        /// <param name="achieverEntityTypeId">The achiever entity type identifier.</param>
+        /// <param name="achieverEntityId">The achiever identifier. The current person is used if this is omitted.</param>
         /// <param name="includeOnlyEligible">Include only progress statements for achievement types that have no unmet prerequisites</param>
         /// <returns></returns>
-        /// <exception cref="HttpResponseException"></exception>
+        /// <exception cref="HttpResponseException">
+        /// </exception>
         [Authenticate, Secured]
         [HttpGet]
-        [System.Web.Http.Route( "api/StreakTypeAchievementTypes/Progress" )]
-        public virtual List<ProgressStatement> GetProgressForPerson( [FromUri]int personId = default, [FromUri]bool includeOnlyEligible = default )
+        [System.Web.Http.Route( "api/AchievementTypes/Progress" )]
+        public virtual List<ProgressStatement> GetProgressForAchiever( [FromUri]int achieverEntityTypeId, [FromUri]int achieverEntityId = default, [FromUri]bool includeOnlyEligible = default )
         {
             var rockContext = Service.Context as RockContext;
+            var isPerson = achieverEntityTypeId == EntityTypeCache.Get<Person>().Id;
+            var isPersonAlias = achieverEntityTypeId == EntityTypeCache.Get<PersonAlias>().Id;
 
-            // If not specified, use the current person id
-            if ( personId == default )
+            // If not specified, use the current person
+            if ( achieverEntityId == default && isPerson )
             {
-                personId = GetPerson( rockContext )?.Id ?? default;
+                achieverEntityId = GetPerson( rockContext )?.Id ?? default;
 
-                if ( personId == default )
+                if ( achieverEntityId == default )
                 {
-                    var errorResponse = ControllerContext.Request.CreateErrorResponse( HttpStatusCode.BadRequest, "The personId for the current user did not resolve" );
+                    var errorResponse = ControllerContext.Request.CreateErrorResponse( HttpStatusCode.BadRequest, "The person Id for the current user did not resolve" );
                     throw new HttpResponseException( errorResponse );
                 }
             }
 
-            var achievementTypeService = Service as StreakTypeAchievementTypeService;
-            var progressStatements = achievementTypeService.GetProgressStatements( personId );
+            if ( achieverEntityId == default && isPersonAlias )
+            {
+                achieverEntityId = GetPersonAliasId( rockContext ) ?? default;
+
+                if ( achieverEntityId == default )
+                {
+                    var errorResponse = ControllerContext.Request.CreateErrorResponse( HttpStatusCode.BadRequest, "The person alias Id for the current user did not resolve" );
+                    throw new HttpResponseException( errorResponse );
+                }
+            }
+
+            if ( achieverEntityId == default )
+            {
+                var errorResponse = ControllerContext.Request.CreateErrorResponse( HttpStatusCode.BadRequest, "The achiever entity id could not be resolved" );
+                throw new HttpResponseException( errorResponse );
+            }
+
+            var achievementTypeService = Service as AchievementTypeService;
+            var progressStatements = achievementTypeService.GetProgressStatements( achieverEntityTypeId, achieverEntityId );
 
             if ( includeOnlyEligible )
             {

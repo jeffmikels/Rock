@@ -166,9 +166,9 @@ namespace Rock.Web.Cache
         /// Returns all of the achievements that apply to this streak type.
         /// </summary>
         /// <returns></returns>
-        public List<StreakTypeAchievementTypeCache> StreakTypeAchievementTypes
+        public List<AchievementTypeCache> AchievementTypes
         {
-            get => StreakTypeAchievementTypeCache.All().Where( stat => stat.StreakTypeId == Id ).ToList();
+            get => AchievementTypeCache.All().Where( stat => stat.StreakTypeId == Id ).ToList();
         }
 
         #endregion

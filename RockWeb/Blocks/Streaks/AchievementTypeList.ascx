@@ -16,7 +16,6 @@
                 <div class="grid grid-panel">
                     <Rock:Grid ID="gAchievements" runat="server" AllowSorting="false" OnRowSelected="gAchievements_Edit">
                         <Columns>
-                            <Rock:ReorderField />
                             <Rock:RockTemplateField ExcelExportBehavior="NeverInclude" HeaderStyle-Width="48px">
                                 <ItemTemplate>
                                    <i class="fa-fw <%# Eval( "IconCssClass" ) %>"></i>
@@ -24,8 +23,8 @@
                             </Rock:RockTemplateField>
                             <Rock:RockBoundField DataField="Name" HeaderText="Name" />
                             <Rock:BoolField DataField="IsActive" HeaderText="Active" />
-                            <Rock:RockBoundField DataField="StreakTypeName" HeaderText="Streak Type" />
                             <Rock:RockBoundField DataField="ComponentName" HeaderText="Achievement Type" />
+                            <Rock:RockBoundField DataField="SourceName" HeaderText="Source" />
                             <Rock:DeleteField OnClick="gAchievements_Delete" />
                         </Columns>
                     </Rock:Grid>

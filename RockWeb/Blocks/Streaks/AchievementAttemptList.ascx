@@ -36,7 +36,7 @@
                                     <div class="col-md-6">
                                         <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
                                         <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
-                                        <Rock:StreakTypeAchievementTypePicker ID="statPicker" runat="server" Label="Achievement Type" />
+                                        <Rock:AchievementTypePicker ID="statPicker" runat="server" Label="Achievement Type" />
                                     </div>
                                     <div class="col-md-6">
                                         <Rock:DateRangePicker ID="drpStartDate" runat="server" Label="Start Date" />

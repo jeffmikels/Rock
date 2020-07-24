@@ -77,9 +77,9 @@ namespace RockWeb.Blocks.Streaks
         private static class PageParameterKey
         {
             /// <summary>
-            /// The streak type achievement type identifier
+            /// The achievement type identifier
             /// </summary>
-            public const string StreakTypeAchievementTypeId = "StreakTypeAchievementTypeId";
+            public const string AchievementTypeId = "AchievementTypeId";
 
             /// <summary>
             /// The streak id page parameter key
@@ -89,7 +89,7 @@ namespace RockWeb.Blocks.Streaks
             /// <summary>
             /// The streak achievement attempt identifier
             /// </summary>
-            public const string StreakAchievementAttemptId = "StreakAchievementAttemptId";
+            public const string AchievementAttemptId = "AchievementAttemptId";
         }
 
         #endregion Keys
@@ -167,7 +167,7 @@ namespace RockWeb.Blocks.Streaks
         /// </summary>
         private void InitializeActionButtons()
         {
-            btnDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', 'Are you sure?');", StreakAchievementAttempt.FriendlyTypeName );
+            btnDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', 'Are you sure?');", AchievementAttempt.FriendlyTypeName );
         }
 
         /// <summary>
@@ -191,16 +191,16 @@ namespace RockWeb.Blocks.Streaks
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnStreak_Click( object sender, EventArgs e )
         {
-            var attempt = GetAttempt();
+            var streak = GetStreak();
 
-            if ( attempt == null )
+            if ( streak == null )
             {
-                ShowBlockError( nbEditModeMessage, "An attempt is required" );
+                ShowBlockError( nbEditModeMessage, "A streak is required" );
                 return;
             }
 
             NavigateToLinkedPage( AttributeKey.StreakPage, new Dictionary<string, string> {
-                { PageParameterKey.StreakId, attempt.StreakId.ToString() }
+                { PageParameterKey.StreakId, streak.Id.ToString() }
             } );
         }
 
@@ -220,7 +220,7 @@ namespace RockWeb.Blocks.Streaks
             }
 
             NavigateToLinkedPage( AttributeKey.AchievementPage, new Dictionary<string, string> {
-                { PageParameterKey.StreakTypeAchievementTypeId, attempt.StreakTypeAchievementTypeId.ToString() }
+                { PageParameterKey.AchievementTypeId, attempt.AchievementTypeId.ToString() }
             } );
         }
 
@@ -366,8 +366,13 @@ namespace RockWeb.Blocks.Streaks
                     return;
                 }
 
-                parameters[PageParameterKey.StreakTypeAchievementTypeId] = attempt.StreakTypeAchievementTypeId.ToString();
-                parameters[PageParameterKey.StreakId] = attempt.StreakId.ToString();
+                parameters[PageParameterKey.AchievementTypeId] = attempt.AchievementTypeId.ToString();
+                var streak = GetStreak();
+
+                if ( streak != null )
+                {
+                    parameters[PageParameterKey.StreakId] = streak.Id.ToString();
+                }
 
                 var service = GetAttemptService();
                 service.Delete( attempt );
@@ -393,10 +398,10 @@ namespace RockWeb.Blocks.Streaks
                 var streak = GetOrAddStreak();
                 var achievementTypeId = achievementType == null ? atpAchievementType.SelectedValue.AsInteger() : achievementType.Id;
 
-                attempt = new StreakAchievementAttempt
+                attempt = new AchievementAttempt
                 {
-                    StreakTypeAchievementTypeId = achievementTypeId,
-                    StreakId = streak.Id
+                    AchievementTypeId = achievementTypeId,
+                    AchieverEntityId = streak.PersonAliasId
                 };
 
                 attemptService.Add( attempt );
@@ -469,7 +474,7 @@ namespace RockWeb.Blocks.Streaks
 
             // If the save was successful, reload the page using the new record Id.
             NavigateToPage( RockPage.Guid, new Dictionary<string, string> {
-                { PageParameterKey.StreakAchievementAttemptId, attempt.Id.ToString() }
+                { PageParameterKey.AchievementAttemptId, attempt.Id.ToString() }
             } );
         }
 
@@ -584,8 +589,25 @@ namespace RockWeb.Blocks.Streaks
             descriptionList.Add( "Date", GetAttemptDateRangeString() );
             lAttemptDescription.Text = descriptionList.Html;
 
-            SetLinkVisibility( btnAchievement, AttributeKey.AchievementPage );
-            SetLinkVisibility( btnStreak, AttributeKey.StreakPage );
+            var achievementTypeCache = GetAchievementTypeCache();
+
+            if ( achievementTypeCache != null )
+            {
+                SetLinkVisibility( btnAchievement, AttributeKey.AchievementPage );
+            }
+            else
+            {
+                btnAchievement.Visible = false;
+            }
+
+            if ( achievementTypeCache != null && achievementTypeCache.StreakTypeCache != null )
+            {
+                SetLinkVisibility( btnStreak, AttributeKey.StreakPage );
+            }
+            else
+            {
+                btnStreak.Visible = false;
+            }
         }
 
         /// <summary>
@@ -759,50 +781,50 @@ namespace RockWeb.Blocks.Streaks
         /// Gets the type of the achievement.
         /// </summary>
         /// <returns></returns>
-        private StreakTypeAchievementTypeCache GetAchievementTypeCache()
+        private AchievementTypeCache GetAchievementTypeCache()
         {
-            if ( _streakTypeAchievementTypeCache != null )
+            if ( _achievementTypeCache != null )
             {
-                return _streakTypeAchievementTypeCache;
+                return _achievementTypeCache;
             }
 
             var attempt = GetAttempt();
-            var achievementTypeId = PageParameter( PageParameterKey.StreakTypeAchievementTypeId ).AsIntegerOrNull();
+            var achievementTypeId = PageParameter( PageParameterKey.AchievementTypeId ).AsIntegerOrNull();
 
             if ( attempt != null )
             {
-                achievementTypeId = attempt.StreakTypeAchievementTypeId;
+                achievementTypeId = attempt.AchievementTypeId;
             }
 
             if ( achievementTypeId.HasValue && achievementTypeId.Value > 0 )
             {
-                _streakTypeAchievementTypeCache = StreakTypeAchievementTypeCache.Get( achievementTypeId.Value );
+                _achievementTypeCache = AchievementTypeCache.Get( achievementTypeId.Value );
             }
 
-            return _streakTypeAchievementTypeCache;
+            return _achievementTypeCache;
         }
-        private StreakTypeAchievementTypeCache _streakTypeAchievementTypeCache = null;
+        private AchievementTypeCache _achievementTypeCache = null;
 
         /// <summary>
         /// Gets the attempt.
         /// </summary>
         /// <returns></returns>
-        private StreakAchievementAttempt GetAttempt()
+        private AchievementAttempt GetAttempt()
         {
             if ( _attempt == null )
             {
-                var attemptId = PageParameter( PageParameterKey.StreakAchievementAttemptId ).AsIntegerOrNull();
+                var attemptId = PageParameter( PageParameterKey.AchievementAttemptId ).AsIntegerOrNull();
 
                 if ( attemptId.HasValue && attemptId.Value > 0 )
                 {
                     var service = GetAttemptService();
-                    _attempt = service.Queryable( "Streak.PersonAlias.Person" ).FirstOrDefault( saa => saa.Id == attemptId.Value );
+                    _attempt = service.Queryable().FirstOrDefault( saa => saa.Id == attemptId.Value );
                 }
             }
 
             return _attempt;
         }
-        private StreakAchievementAttempt _attempt = null;
+        private AchievementAttempt _attempt = null;
 
         /// <summary>
         /// Get the actual streak model for deleting or editing
@@ -816,21 +838,14 @@ namespace RockWeb.Blocks.Streaks
             }
 
             var attempt = GetAttempt();
-
-            if ( attempt != null && attempt.Streak != null )
-            {
-                _streak = attempt.Streak;
-                return _streak;
-            }
-
             var streakId = PageParameter( PageParameterKey.StreakId ).AsIntegerOrNull();
 
             if ( attempt != null )
             {
-                streakId = attempt.StreakId;
+                var streakService = GetStreakService();
+                _streak = streakService.QueryByAchievementAttemptId( attempt.Id ).FirstOrDefault();
             }
-
-            if ( streakId.HasValue && streakId.Value > 0 )
+            else if ( streakId.HasValue && streakId.Value > 0 )
             {
                 var service = GetStreakService();
                 _streak = service.Queryable( "PersonAlias.Person" ).FirstOrDefault( s => s.Id == streakId.Value );
@@ -854,7 +869,7 @@ namespace RockWeb.Blocks.Streaks
             }
 
             var achievementType = GetAchievementTypeCache();
-            var streakTypeId = achievementType.StreakTypeId;
+            var streakTypeId = achievementType.StreakTypeId.Value;
             var personId = ppPerson.PersonId ?? 0;
 
             var streakService = GetStreakService();
@@ -895,6 +910,21 @@ namespace RockWeb.Blocks.Streaks
                 _person = service.GetPerson( streak.PersonAliasId );
             }
 
+            var attempt = GetAttempt();
+            var achievementTypeCache = GetAchievementTypeCache();
+
+            if ( attempt != null && achievementTypeCache != null && achievementTypeCache.IsAchievedByPersonAlias )
+            {
+                var service = GetPersonAliasService();
+                _person = service.GetPerson( attempt.AchieverEntityId );
+            }
+
+            if ( attempt != null && achievementTypeCache != null && achievementTypeCache.IsAchievedByPerson )
+            {
+                var service = GetPersonService();
+                _person = service.Get( attempt.AchieverEntityId );
+            }
+
             return _person;
         }
         private Person _person = null;
@@ -932,6 +962,22 @@ namespace RockWeb.Blocks.Streaks
         private PersonAliasService _personAliasService = null;
 
         /// <summary>
+        /// Get the person service
+        /// </summary>
+        /// <returns></returns>
+        private PersonService GetPersonService()
+        {
+            if ( _personService == null )
+            {
+                var rockContext = GetRockContext();
+                _personService = new PersonService( rockContext );
+            }
+
+            return _personService;
+        }
+        private PersonService _personService = null;
+
+        /// <summary>
         /// Get the streak service
         /// </summary>
         /// <returns></returns>
@@ -951,17 +997,17 @@ namespace RockWeb.Blocks.Streaks
         /// Gets the attempt service.
         /// </summary>
         /// <returns></returns>
-        private StreakAchievementAttemptService GetAttemptService()
+        private AchievementAttemptService GetAttemptService()
         {
             if ( _attemptService == null )
             {
                 var rockContext = GetRockContext();
-                _attemptService = new StreakAchievementAttemptService( rockContext );
+                _attemptService = new AchievementAttemptService( rockContext );
             }
 
             return _attemptService;
         }
-        private StreakAchievementAttemptService _attemptService = null;
+        private AchievementAttemptService _attemptService = null;
 
         /// <summary>
         /// Get the rock context

@@ -890,8 +890,11 @@ namespace RockWeb.Blocks.Streaks
                 if ( streakId.HasValue && streakId.Value > 0 )
                 {
                     var rockContext = GetRockContext();
-                    var service = new StreakAchievementAttemptService( rockContext );
-                    _successfulAttempts = service.Queryable().AsNoTracking().Count( saa => saa.StreakId == streakId && saa.IsSuccessful );
+                    var achievementAttemptService = new AchievementAttemptService( rockContext );
+
+                    _successfulAttempts = achievementAttemptService.QueryByStreakId( streakId.Value )
+                        .AsNoTracking()
+                        .Count( saa => saa.IsSuccessful );
                 }
             }
 

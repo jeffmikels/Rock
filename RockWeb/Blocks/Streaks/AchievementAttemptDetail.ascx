@@ -67,19 +67,19 @@
                             <Rock:PersonPicker ID="ppPerson" runat="server" Required="true" Label="Person" />
                         </div>
                         <div class="col-md-6" id="divAchievement" runat="server">
-                            <Rock:StreakTypeAchievementTypePicker ID="atpAchievementType" runat="server" Required="true" Label="Achievement" />
+                            <Rock:AchievementTypePicker ID="atpAchievementType" runat="server" Required="true" Label="Achievement" />
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6">
-                            <Rock:DatePicker ID="dpStart" runat="server" SourceTypeName="Rock.Model.StreakAchievementAttempt, Rock" PropertyName="AchievementAttemptStartDateTime" Required="true" Label="Start Date" Help="The date that progress toward this attempt began." />
+                            <Rock:DatePicker ID="dpStart" runat="server" SourceTypeName="Rock.Model.AchievementAttempt, Rock" PropertyName="AchievementAttemptStartDateTime" Required="true" Label="Start Date" Help="The date that progress toward this attempt began." />
                         </div>
                         <div class="col-md-6">
-                            <Rock:DatePicker ID="dpEnd" runat="server" SourceTypeName="Rock.Model.StreakAchievementAttempt, Rock" PropertyName="AchievementAttemptEndDateTime" Required="false" Label="End Date" Help="The date that progress toward this attempt ended." />
+                            <Rock:DatePicker ID="dpEnd" runat="server" SourceTypeName="Rock.Model.AchievementAttempt, Rock" PropertyName="AchievementAttemptEndDateTime" Required="false" Label="End Date" Help="The date that progress toward this attempt ended." />
                         </div>
                         <div class="col-md-6">
-                            <Rock:RockTextBox ID="tbProgress" runat="server" CssClass="input-width-md" SourceTypeName="Rock.Model.StreakAchievementAttempt, Rock" PropertyName="Progress" Required="false" Label="Progress" Help="The percent towards completion of this attempt. 0.5 is 50%, 1 is 100%, etc." />
+                            <Rock:RockTextBox ID="tbProgress" runat="server" CssClass="input-width-md" SourceTypeName="Rock.Model.AchievementAttempt, Rock" PropertyName="Progress" Required="false" Label="Progress" Help="The percent towards completion of this attempt. 0.5 is 50%, 1 is 100%, etc." />
                         </div>
                     </div>
 

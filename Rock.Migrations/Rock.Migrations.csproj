@@ -65,6 +65,10 @@
     <Compile Include="Migrations\202007211806064_Rollup_0721.Designer.cs">
       <DependentUpon>202007211806064_Rollup_0721.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202007241806550_EntityAchievements.cs" />
+    <Compile Include="Migrations\202007241806550_EntityAchievements.Designer.cs">
+      <DependentUpon>202007241806550_EntityAchievements.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Version 11.0\Version 1.11.0\202006231558281_PrayerRequestWorkflowAction.cs" />
     <Compile Include="Migrations\Version 11.0\Version 1.11.0\202006231558281_PrayerRequestWorkflowAction.Designer.cs">
       <DependentUpon>202006231558281_PrayerRequestWorkflowAction.cs</DependentUpon>
@@ -1313,6 +1317,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Migrations\202007211806064_Rollup_0721.resx">
       <DependentUpon>202007211806064_Rollup_0721.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202007241806550_EntityAchievements.resx">
+      <DependentUpon>202007241806550_EntityAchievements.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\Version 11.0\Version 1.11.0\202006231558281_PrayerRequestWorkflowAction.resx">
       <DependentUpon>202006231558281_PrayerRequestWorkflowAction.cs</DependentUpon>
@@ -2578,7 +2585,7 @@
 CALL CopyToPackage.bat
 </PreBuildEvent>
   </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

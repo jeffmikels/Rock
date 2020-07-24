@@ -30,6 +30,31 @@ namespace Rock.Model
     public partial class StreakService
     {
         /// <summary>
+        /// Queries streaks by achievement attempt identifier.
+        /// </summary>
+        /// <param name="achievementAttemptId">The achievement attempt identifier.</param>
+        /// <returns></returns>
+        public IQueryable<Streak> QueryByAchievementAttemptId( int achievementAttemptId )
+        {
+            var rockContext = Context as RockContext;
+            var achievementAttemptService = new AchievementAttemptService( rockContext );
+            var streakEntityTypeId = EntityTypeCache.Get<Streak>().Id;
+            var personAliasEntityTypeId = EntityTypeCache.Get<PersonAlias>().Id;
+
+            var attemptQuery = achievementAttemptService.Queryable()
+                .AsNoTracking()
+                .Where( aa =>
+                    aa.AchievementType.SourceEntityTypeId == streakEntityTypeId &&
+                    aa.AchievementType.AchieverEntityTypeId == personAliasEntityTypeId &&
+                    aa.AchievementType.SourceEntityQualifierColumn == nameof( Streak.StreakTypeId ) &&
+                    aa.Id == achievementAttemptId );
+
+            return Queryable().Where( s =>
+                attemptQuery.Select( aa => aa.AchieverEntityId ).Contains( s.PersonAliasId ) &&
+                attemptQuery.Select( aa => aa.AchievementType.SourceEntityQualifierValue ).Contains( s.StreakTypeId.ToString() ) );
+        }
+
+        /// <summary>
         /// Get the person's streaks in the streak type
         /// </summary>
         /// <param name="streakTypeId"></param>
@@ -52,23 +77,6 @@ namespace Rock.Model
         }
 
         /// <summary>
-        /// Deletes the specified item.
-        /// </summary>
-        /// <param name="item">The item.</param>
-        /// <returns></returns>
-        public override bool Delete( Streak item )
-        {
-            // Since Entity Framework cannot cascade delete achievement attempts because of a possible circular reference,
-            // we need to delete them here
-            var attemptService = new StreakAchievementAttemptService( Context as RockContext );
-            var attempts = attemptService.Queryable().Where( a => a.StreakId == item.Id );
-            attemptService.DeleteRange( attempts );
-
-            // Now we can delete the streak as normal
-            return base.Delete( item );
-        }
-
-        /// <summary>
         /// Start an async task to do things that should run after a streak has been updated
         /// </summary>
         /// <param name="streakId"></param>
@@ -86,7 +94,6 @@ namespace Rock.Model
         public static void HandlePostSaveChanges( int streakId )
         {
             RefreshStreakDenormalizedProperties( streakId );
-            ProcessAchievements( streakId );
         }
 
         /// <summary>
@@ -146,43 +153,6 @@ namespace Rock.Model
 
             target.CurrentStreakCount = source.CurrentStreakCount;
             target.CurrentStreakStartDate = source.CurrentStreakStartDate;
-        }
-
-        /// <summary>
-        /// Check for achievements that may have been earned
-        /// </summary>
-        /// <param name="streakId">The streak identifier.</param>
-        private static void ProcessAchievements( int streakId )
-        {
-            var rockContext = new RockContext();
-            var streakService = new StreakService( rockContext );
-            var streak = streakService.Get( streakId );
-
-            if ( streak == null )
-            {
-                ExceptionLogService.LogException( $"The streak with id {streakId} was not found (it may have been deleted)" );
-                return;
-            }
-
-            var streakTypeCache = StreakTypeCache.Get( streak.StreakTypeId );
-
-            /*
-             * 2019-01-13 BJW
-             *
-             * Achievements need to be processed in order according to dependencies (prerequisites). Prerequisites should be processed first so that,
-             * if the prerequisite becomes completed, the dependent achievement will be processed at this time as well. Furthermore, each achievement
-             * needs to be processed and changes saved to the database so that subsequent achievements will see the changes (for example: now met
-             * prerequisites).
-             */ 
-            var sortedAchievementTypes = StreakTypeAchievementTypeService.SortAccordingToPrerequisites( streakTypeCache.StreakTypeAchievementTypes );
-
-            foreach ( var streakTypeAchievementTypeCache in sortedAchievementTypes )
-            {
-                var loopRockContext = new RockContext();
-                var component = streakTypeAchievementTypeCache.AchievementComponent;
-                component.Process( loopRockContext, streakTypeAchievementTypeCache, streak );
-                loopRockContext.SaveChanges();
-            }
         }
     }
 }
