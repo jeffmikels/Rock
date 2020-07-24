@@ -550,24 +550,61 @@ namespace Rock.Model
         }
 
         /// <summary>
-        /// Get all the group ids that have scheduling enabled,including all ancenstorsOfThoseGroups.
-        /// Use this to detect if a group has scheduling enabled, or a group has a child group with scheduling enabled
+        /// Get all the group ids that have RSVP enabled,including all ancenstorsOfThoseGroups.
+        /// Use this to detect if a group has RSVP enabled, or a group has a child group with RSVP enabled
         /// </summary>
         /// <returns></returns>
-        public List<int> GetGroupIdsWithSchedulingEnabledWithAncestors()
+        public List<int> GetGroupIdsWithRSVPEnabledWithAncestors()
         {
-            var sql = @" ;with CTE as (
+            var rsvpEnabledGroupTypeIds = GroupTypeCache.All().Where( a => a.EnableRSVP ).Select( a => a.Id ).ToList();
+
+            if ( !rsvpEnabledGroupTypeIds.Any() )
+            {
+                return new List<int>();
+            }
+
+            var sql = $@" ;with CTE as (
                 select g1.*
-                    from [Group] g1 
-                    join [GroupType] gt on g1.GroupTypeId = gt.Id and gt.IsSchedulingEnabled = 1
-                    where g1.DisableScheduling != 1  and [IsArchived] = 0
+                    from [Group] g1
+                    where g1.GroupTypeId in ({rsvpEnabledGroupTypeIds.AsDelimited( "," )})
+                    and g1.[IsArchived] = 0
                 union all
                 select [a].* from [Group] [a]
                 inner join CTE pcte on pcte.ParentGroupId = [a].[Id]  and a.[IsArchived] = 0
                 )
                 select distinct Id from CTE";
 
-            var groupsWithSchedulingEnabled = this.Context.Database.SqlQuery<int>(sql).ToList();
+            var groupsWithRSVPEnabled = this.Context.Database.SqlQuery<int>( sql ).ToList();
+
+            return groupsWithRSVPEnabled;
+        }
+
+        /// <summary>
+        /// Get all the group ids that have scheduling enabled,including all ancenstorsOfThoseGroups.
+        /// Use this to detect if a group has scheduling enabled, or a group has a child group with scheduling enabled
+        /// </summary>
+        /// <returns></returns>
+        public List<int> GetGroupIdsWithSchedulingEnabledWithAncestors()
+        {
+            var schedulingEnabledGroupTypeIds = GroupTypeCache.All().Where( a => a.IsSchedulingEnabled ).Select( a => a.Id ).ToList();
+
+            if ( !schedulingEnabledGroupTypeIds.Any() )
+            {
+                return new List<int>();
+            }
+
+            var sql = $@" ;with CTE as (
+                select g1.*
+                    from [Group] g1 
+                    where g1.GroupTypeId in ({schedulingEnabledGroupTypeIds.AsDelimited( "," )})
+                    and g1.DisableScheduling != 1  and [IsArchived] = 0
+                union all
+                select [a].* from [Group] [a]
+                inner join CTE pcte on pcte.ParentGroupId = [a].[Id]  and a.[IsArchived] = 0
+                )
+                select distinct Id from CTE";
+
+            var groupsWithSchedulingEnabled = this.Context.Database.SqlQuery<int>( sql ).ToList();
 
             return groupsWithSchedulingEnabled;
         }

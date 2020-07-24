@@ -91,112 +91,148 @@ namespace Rock.Rest.Controllers
 
             var person = GetPerson();
 
-            // fetch the parentGroup so that Auth doesn't have do lazy load the ParentGroup for every group
-            var parentGroup = groupService.Get( id > 0 ? id : rootGroupId );
-
-            List<int> groupIdsWithSchedulingEnabledWithAncestors = null;
-
-            if ( limitToSchedulingEnabled )
+            Group parentGroup = null;
+            var parentGroupId = id > 0 ? id : rootGroupId;
+            if ( parentGroupId > 0 )
             {
-                groupIdsWithSchedulingEnabledWithAncestors = groupService.GetGroupIdsWithSchedulingEnabledWithAncestors();
+                // fetch the parentGroup so that Auth doesn't have to lazy load the ParentGroup for every group
+                parentGroup = groupService.Get( parentGroupId );
             }
 
-            foreach ( var group in qry.ToList().OrderBy( g => g.Order ).ThenBy( g => g.Name ) )
+            List<int> groupIdsWithSchedulingEnabledWithAncestors = null;
+            List<int> groupIdsWithRSVPEnabledWithAncestors = null;
+
+            var listOfChildGroups = qry.ToList().OrderBy( g => g.Order ).ThenBy( g => g.Name ).ToList();
+            if ( listOfChildGroups.Any() )
+            {
+                if ( limitToSchedulingEnabled )
+                {
+                    groupIdsWithSchedulingEnabledWithAncestors = groupService.GetGroupIdsWithSchedulingEnabledWithAncestors();
+                }
+
+                if ( limitToRSVPEnabled )
+                {
+                    groupIdsWithRSVPEnabledWithAncestors = groupService.GetGroupIdsWithRSVPEnabledWithAncestors();
+                }
+            }
+
+            foreach ( var group in listOfChildGroups )
             {
                 // we already have the ParentGroup record, so lets set it for each group to avoid a database round-trip during Auth
                 group.ParentGroup = parentGroup;
 
-                if ( group.IsAuthorized( Rock.Security.Authorization.VIEW, person ) )
-                {
-                    var groupType = GroupTypeCache.Get( group.GroupTypeId );
+                var groupType = GroupTypeCache.Get( group.GroupTypeId );
 
-                    bool includeGroup_Scheduling = true;
-                    if ( limitToSchedulingEnabled )
+                //// Before checking Auth, filter based on the limitToSchedulingEnabled and limitToRSVPEnabled option.
+                //// Auth takes longer to check, so if we can rule the group out sooner, that will save a bunch of time
+
+                if ( limitToSchedulingEnabled )
+                {
+                    var includeGroup = false;
+                    if ( groupType?.IsSchedulingEnabled == true )
                     {
-                        includeGroup_Scheduling = false;
-                        if ( groupType?.IsSchedulingEnabled == true )
+                        // if this group's group type has scheduling enabled, we will include this group
+                        includeGroup = true;
+                    }
+                    else
+                    {
+                        // if this group's group type does not have scheduling enabled, we will need to include it if any of its children
+                        // have scheduling enabled
+
+                        /*
+                        UPDATE:
+                        2020-06-19 MDP
+
+                        Improved the performance of determining if a group or it's children has scheduling
+                        by using GroupService.GetGroupIdsWithSchedulingEnabledWithAncestors.
+                        GetGroupIdsWithSchedulingEnabledWithAncestors does the CTE from the bottom up instead of
+                        from the top down. This method is much more efficient then looking for children from the top down
+                        and it only has to be done once.
+
+                        This should help avoid any performance issues.
+                        ----
+                        
+                        2020-05-01 BJW 
+
+                        This hierarchy query was timing out on some Rock instances with a large amount of groups. I removed the
+                        limitToSchedulingEnabled=true param from the group scheduling block because of it. This logic will remain here
+                        for backwards compatibility, but note that sometimes there are performance issues.
+
+                        bool hasChildScheduledEnabledGroups = groupService.GetAllDescendentsGroupTypes( group.Id, includeInactiveGroups ).Any( a => a.IsSchedulingEnabled == true );
+                        if ( hasChildScheduledEnabledGroups )
                         {
                             includeGroup_Scheduling = true;
                         }
-                        else
+                        */
+
+                        if ( groupIdsWithSchedulingEnabledWithAncestors != null )
                         {
-                            /*
-                            2020-05-01 BJW 
-
-                            This hierarchy query was timing out on some Rock instances with a large amount of groups. I removed the
-                            limitToSchedulingEnabled=true param from the group scheduling block because of it. This logic will remain here
-                            for backwards compatibility, but note that sometimes there are performance issues.
-
-                            bool hasChildScheduledEnabledGroups = groupService.GetAllDescendentsGroupTypes( group.Id, includeInactiveGroups ).Any( a => a.IsSchedulingEnabled == true );
+                            bool hasChildScheduledEnabledGroups = groupIdsWithSchedulingEnabledWithAncestors.Contains( group.Id );
                             if ( hasChildScheduledEnabledGroups )
                             {
-                                includeGroup_Scheduling = true;
-                            }
-
-                            UPDATE:
-                            2020-06-19 MDP
-
-                            Improved the performance of determining if a group or it's children has scheduling
-                            by using GroupService.GetGroupIdsWithSchedulingEnabledWithAncestors.
-                            GetGroupIdsWithSchedulingEnabledWithAncestors does the CTE from the bottom up instead of
-                            from the top down. This method is much more efficient it only has to be done once
-
-                            This should help avoid any performance issues
-                            */
-
-                            if ( groupIdsWithSchedulingEnabledWithAncestors != null )
-                            {
-                                bool hasChildScheduledEnabledGroups = groupIdsWithSchedulingEnabledWithAncestors.Contains( group.Id );
-                                if ( hasChildScheduledEnabledGroups )
-                                {
-                                    includeGroup_Scheduling = true;
-                                }
+                                includeGroup = true;
                             }
                         }
                     }
 
-                    bool includeGroup_RSVP = true;
-                    if ( limitToRSVPEnabled )
+                    if ( !includeGroup )
                     {
-                        includeGroup_RSVP = false;
-                        if ( groupType?.EnableRSVP == true )
-                        {
-                            includeGroup_RSVP = true;
-                        }
-                        else
-                        {
-                            bool hasChildRSVPEnabledGroups = groupService.GetAllDescendentsGroupTypes( group.Id, includeInactiveGroups ).Any( a => a.EnableRSVP == true );
-                            if ( hasChildRSVPEnabledGroups )
-                            {
-                                includeGroup_RSVP = true;
-                            }
-                        }
-                    }
-
-                    if ( includeGroup_Scheduling && includeGroup_RSVP )
-                    {
-                        groupList.Add( group );
-                        var treeViewItem = new TreeViewItem();
-                        treeViewItem.Id = group.Id.ToString();
-                        treeViewItem.Name = group.Name;
-                        treeViewItem.IsActive = group.IsActive;
-
-                        // if there a IconCssClass is assigned, use that as the Icon.
-                        treeViewItem.IconCssClass = groupType?.IconCssClass;
-
-                        if ( countsType == TreeViewItem.GetCountsType.GroupMembers )
-                        {
-                            int groupMemberCount = new GroupMemberService( this.Service.Context as RockContext ).Queryable().Where( a => a.GroupId == group.Id && a.GroupMemberStatus == GroupMemberStatus.Active ).Count();
-                            treeViewItem.CountInfo = groupMemberCount;
-                        }
-                        else if ( countsType == TreeViewItem.GetCountsType.ChildGroups )
-                        {
-                            treeViewItem.CountInfo = groupService.Queryable().Where( a => a.ParentGroupId.HasValue && a.ParentGroupId == group.Id ).Count();
-                        }
-
-                        groupNameList.Add( treeViewItem );
+                        continue;
                     }
                 }
+
+                if ( limitToRSVPEnabled )
+                {
+                    var includeGroup = false;
+                    if ( groupType?.EnableRSVP == true )
+                    {
+                        // if this group's group type has RSVP enabled, we will include this group
+                        includeGroup = true;
+                    }
+                    else
+                    {
+                        if ( groupIdsWithRSVPEnabledWithAncestors != null )
+                        {
+                            bool hasChildRSVPEnabledGroups = groupIdsWithRSVPEnabledWithAncestors.Contains( group.Id );
+                            if ( hasChildRSVPEnabledGroups )
+                            {
+                                includeGroup = true;
+                            }
+                        }
+                    }
+
+                    if ( !includeGroup )
+                    {
+                        continue;
+                    }
+                }
+
+                bool groupIsAuthorized = group.IsAuthorized( Rock.Security.Authorization.VIEW, person );
+                if ( !groupIsAuthorized )
+                {
+                    continue;
+                }
+
+                groupList.Add( group );
+                var treeViewItem = new TreeViewItem();
+                treeViewItem.Id = group.Id.ToString();
+                treeViewItem.Name = group.Name;
+                treeViewItem.IsActive = group.IsActive;
+
+                // if there a IconCssClass is assigned, use that as the Icon.
+                treeViewItem.IconCssClass = groupType?.IconCssClass;
+
+                if ( countsType == TreeViewItem.GetCountsType.GroupMembers )
+                {
+                    int groupMemberCount = new GroupMemberService( this.Service.Context as RockContext ).Queryable().Where( a => a.GroupId == group.Id && a.GroupMemberStatus == GroupMemberStatus.Active ).Count();
+                    treeViewItem.CountInfo = groupMemberCount;
+                }
+                else if ( countsType == TreeViewItem.GetCountsType.ChildGroups )
+                {
+                    treeViewItem.CountInfo = groupService.Queryable().Where( a => a.ParentGroupId.HasValue && a.ParentGroupId == group.Id ).Count();
+                }
+
+                groupNameList.Add( treeViewItem );
             }
 
             // try to quickly figure out which items have Children
@@ -242,7 +278,6 @@ namespace Rock.Rest.Controllers
         {
             return new PersonService( ( RockContext ) Service.Context ).GetFamilies( personId );
         }
-
 
         /// <summary>
         /// Returns a simplified data structure of the check-in parameters. This is used by FrontPorch but is generalized.
@@ -808,11 +843,16 @@ namespace Rock.Rest.Controllers
             var childGroupIds = childGroups.Select( a => a.Id ).ToList();
 
             // fetch all the groupLocations for all the groups we are going to show (to reduce SQL traffic)
-            var groupsLocationList = groupLocationService.Queryable().Where( a => childGroupIds.Contains( a.GroupId ) && a.Location.GeoPoint != null || a.Location.GeoFence != null ).AsNoTracking().Select( a => new
-            {
-                a.GroupId,
-                a.Location
-            } ).ToList();
+            var groupsLocationList = groupLocationService.Queryable()
+                    .Where( a =>
+                        childGroupIds.Contains( a.GroupId )
+                        && ( a.Location.GeoPoint != null || a.Location.GeoFence != null ) )
+                    .AsNoTracking()
+                    .Select( a => new
+                    {
+                        a.GroupId,
+                        a.Location
+                    } ).ToList();
 
             foreach ( var group in childGroups )
             {
@@ -1424,7 +1464,6 @@ namespace Rock.Rest.Controllers
             /// The geofence.
             /// </value>
             public DbGeography GeoFence { get; set; }
-
 
             /// <summary>
             /// Gets or sets the latitude.

@@ -1,3 +1,4 @@
+set nocount on
 declare
   @regionGroupId int = null,
   @areaGroupId int = null,
@@ -16,23 +17,24 @@ declare
   @groupCounter int = 0,
   @childGroupCounter int = 0,
   @maxGroupsPerArea int = 25,
-  @maxGroupsPerGroup int = 30,
+  @maxGroupsPerGroup int = 3000,
   @groupTypeNHRegionGuid nvarchar(36) = 'B31676B5-A004-4A72-AE0D-4D5E1C6BF5DB',
   @groupTypeNHAreaGuid nvarchar(36) = '30F8F34A-5E18-461E-BEFE-5563AA372574',
   @groupTypeNHGroupGuid nvarchar(36) = '4043A5D6-6C2F-49DB-92DD-BD6ED1937DA8'
 begin
 
-begin transaction
 
-delete from [Group] where [GroupTypeId] in (select id from GroupType where Guid in (@groupTypeNHRegionGuid, @groupTypeNHAreaGuid, @groupTypeNHGroupGuid))
+
+/*delete from [Group] where [GroupTypeId] in (select id from GroupType where Guid in (@groupTypeNHRegionGuid, @groupTypeNHAreaGuid, @groupTypeNHGroupGuid))
 delete from [GroupTypeRole] where [GroupTypeId] in (select id from GroupType where Guid in (@groupTypeNHRegionGuid, @groupTypeNHAreaGuid, @groupTypeNHGroupGuid))
 delete from [GroupTypeAssociation] where [GroupTypeId] in (select id from GroupType where Guid in (@groupTypeNHRegionGuid, @groupTypeNHAreaGuid, @groupTypeNHGroupGuid))
 delete from [GroupType] where [Id] in (select id from GroupType where Guid in (@groupTypeNHRegionGuid, @groupTypeNHAreaGuid, @groupTypeNHGroupGuid))
+*/
 
 select 'adding ' + CAST(@maxRegions AS VARCHAR(10)) + ' group regions';
 select 'adding ' + CAST(@maxRegions*@maxAreasPerRegion AS VARCHAR(10)) + ' group areas';
 select 'adding ' + CAST(@maxRegions*@maxAreasPerRegion*@maxGroupsPerArea AS VARCHAR(10)) + ' groups';
-
+/*
 INSERT INTO [dbo].[GroupType]
            ([IsSystem]
            ,[Name]
@@ -158,13 +160,18 @@ insert into [dbo].[GroupTypeAssociation]
 values
     (@regionGroupTypeId, @areaGroupTypeId),
     (@areaGroupTypeId, @groupTypeId)
+*/
 
+select @regionGroupTypeId = (select top 1 Id from GroupType where [Guid] = @groupTypeNHRegionGuid);
+select @areaGroupTypeId = (select top 1 Id from GroupType where [Guid] = @groupTypeNHAreaGuid);
+select @groupTypeId = (select top 1 Id from GroupType where [Guid] = @groupTypeNHGroupGuid);
 
 select @campusId = null;
 
 -- NG regions
 while @regionCounter < @maxRegions
     begin
+        
         select @groupGuid = NEWID();
         select @groupName = 'Region ' + REPLACE(str(@regionCounter, 2), ' ', '0');
 		if @regionCounter = 0
@@ -235,6 +242,13 @@ while @regionCounter < @maxRegions
 
        
                         set @groupCounter += 1;
+                        if (@groupCounter%50 = 0)
+                        begin
+                          print @groupCounter
+                          print @areaCounter
+                          print @regionCounter
+                          print '----'
+                        end
                     end;
        
                 set @areaCounter += 1;
@@ -243,7 +257,5 @@ while @regionCounter < @maxRegions
        
         set @regionCounter += 1;
     end;
-
-commit transaction
 
 end
