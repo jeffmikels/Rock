@@ -35,7 +35,7 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Blocks.Streaks
 {
     [DisplayName( "Achievement Attempt List" )]
-    [Category( "Streaks" )]
+    [Category( "Achievements" )]
     [Description( "Lists all the people that have made an attempt at earning an achievement." )]
 
     [LinkedPage(
@@ -214,40 +214,10 @@ namespace RockWeb.Blocks.Streaks
                 return;
             }
 
-            var enrollmentId = achievementViewModel.Id;
-            var person = achievementViewModel.Person;
-
-            var lFullName = e.Row.FindControl( _fullNameFieldId ) as Literal;
-            if ( lFullName != null && person != null )
-            {
-                lFullName.Text = person.FullNameReversed;
-            }
-
             var lProgress = e.Row.FindControl( _progressFieldId ) as Literal;
             if ( lProgress != null )
             {
                 lProgress.Text = GetProgressBarHtml( achievementViewModel.Progress );
-            }
-
-            var lNameWithHtml = e.Row.FindControl( _nameWithHtmlFieldId ) as Literal;
-            if ( lNameWithHtml != null && person != null )
-            {
-                var sbNameHtml = new StringBuilder();
-
-                sbNameHtml.AppendFormat( _photoFormat, person.Id, person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) );
-                sbNameHtml.Append( person.FullName );
-
-                if ( person.TopSignalColor.IsNotNullOrWhiteSpace() )
-                {
-                    sbNameHtml.Append( person.GetSignalMarkup() );
-                }
-
-                lNameWithHtml.Text = sbNameHtml.ToString();
-            }
-
-            if ( person != null && person.IsDeceased )
-            {
-                e.Row.AddCssClass( "is-deceased" );
             }
         }
 
@@ -364,7 +334,7 @@ namespace RockWeb.Blocks.Streaks
         protected void gAttempts_Add( object sender, EventArgs e )
         {
             var parameters = new Dictionary<string, string>();
-            var achievementType = GetAchievementType();
+            var achievementType = GetAchievementTypeCache();
             var streak = GetStreak();
 
             if ( streak != null )
@@ -481,21 +451,21 @@ namespace RockWeb.Blocks.Streaks
         /// Gets the type of the achievement.
         /// </summary>
         /// <returns></returns>
-        private AchievementType GetAchievementType()
+        private AchievementTypeCache GetAchievementTypeCache()
         {
-            if ( _achievementType == null )
+            if ( _achievementTypeCache == null )
             {
                 var achievementTypeId = PageParameter( PageParameterKey.AchievementTypeId ).AsIntegerOrNull();
 
                 if ( achievementTypeId.HasValue )
                 {
-                    _achievementType = GetAchievementTypeService().Get( achievementTypeId.Value );
+                    _achievementTypeCache = AchievementTypeCache.Get( achievementTypeId.Value );
                 }
             }
 
-            return _achievementType;
+            return _achievementTypeCache;
         }
-        private AchievementType _achievementType = null;
+        private AchievementTypeCache _achievementTypeCache = null;
 
         /// <summary>
         /// Gets the streak.
@@ -523,7 +493,7 @@ namespace RockWeb.Blocks.Streaks
         /// <returns></returns>
         private IQueryable<AchievementAttempt> GetAttemptsQuery()
         {
-            var achievementType = GetAchievementType();
+            var achievementType = GetAchievementTypeCache();
             var streak = GetStreak();
             var attemptService = GetAttemptService();
 
@@ -550,7 +520,7 @@ namespace RockWeb.Blocks.Streaks
         {
             if ( !_canView.HasValue )
             {
-                var achievementType = GetAchievementType();
+                var achievementType = GetAchievementTypeCache();
 
                 if ( achievementType != null )
                 {
@@ -591,7 +561,7 @@ namespace RockWeb.Blocks.Streaks
 
             if ( !Page.IsPostBack )
             {
-                var achievementType = GetAchievementType();
+                var achievementType = GetAchievementTypeCache();
 
                 if ( achievementType != null )
                 {
@@ -624,7 +594,7 @@ namespace RockWeb.Blocks.Streaks
             gAttempts.RowItemText = "Attempt";
             gAttempts.ExportSource = ExcelExportSource.DataSource;
 
-            var achievementType = GetAchievementType();
+            var achievementType = GetAchievementTypeCache();
 
             if ( achievementType != null )
             {
@@ -664,7 +634,7 @@ namespace RockWeb.Blocks.Streaks
         /// </summary>
         private void BindFilter()
         {
-            if ( GetAchievementType() == null )
+            if ( GetAchievementTypeCache() == null )
             {
                 statPicker.SelectedValue = rFilter.GetUserPreference( FilterKey.AchievementType );
             }
@@ -753,7 +723,8 @@ namespace RockWeb.Blocks.Streaks
         /// </summary>
         protected void BindGrid()
         {
-            var achievementType = GetAchievementType();
+            var achievementType = GetAchievementTypeCache();
+            var achieverEntityTypeCache = achievementType.AchieverEntityTypeCache;
             var isAchieverPerson = achievementType != null && achievementType.AchieverEntityTypeId == EntityTypeCache.GetId<Person>();
             var isAchieverPersonAlias = achievementType != null && achievementType.AchieverEntityTypeId == EntityTypeCache.GetId<PersonAlias>();
 
@@ -837,7 +808,7 @@ namespace RockWeb.Blocks.Streaks
                     ( aa, pa ) => new JoinedQueryViewModel
                     {
                         AchievementAttempt = aa,
-                        Person = pa.Person
+                        AchieverName = pa.Person.FullName
                     } );
             }
             else if ( isAchieverPersonAlias )
@@ -849,7 +820,7 @@ namespace RockWeb.Blocks.Streaks
                     ( aa, pa ) => new JoinedQueryViewModel
                     {
                         AchievementAttempt = aa,
-                        Person = pa.Person
+                        AchieverName = pa.Person.FullName
                     } );
             }
             else
@@ -857,18 +828,15 @@ namespace RockWeb.Blocks.Streaks
                 joinedQuery = query.Select( aa => new JoinedQueryViewModel
                 {
                     AchievementAttempt = aa,
-                    Person = null
+                    AchieverName = achieverEntityTypeCache.FriendlyName + " " + aa.AchieverEntityId
                 } );
             }
 
             var viewModelQuery = joinedQuery.Select( aa => new AttemptViewModel
             {
                 Id = aa.AchievementAttempt.Id,
-                PersonId = aa.Person.Id,
-                LastName = aa.Person.LastName,
-                NickName = aa.Person.NickName,
+                AchieverName = aa.AchieverName,
                 StartDate = aa.AchievementAttempt.AchievementAttemptStartDateTime,
-                Person = aa.Person,
                 EndDate = aa.AchievementAttempt.AchievementAttemptEndDateTime,
                 IsSuccessful = aa.AchievementAttempt.IsSuccessful,
                 IsClosed = aa.AchievementAttempt.IsClosed,
@@ -888,7 +856,7 @@ namespace RockWeb.Blocks.Streaks
                 viewModelQuery = viewModelQuery
                     .OrderBy( avm => avm.IsClosed )
                     .OrderByDescending( avm => avm.StartDate )
-                    .ThenBy( avm => avm.LastName );
+                    .ThenBy( avm => avm.AchieverName );
             }
 
             gAttempts.SetLinqDataSource( viewModelQuery );
@@ -927,14 +895,11 @@ namespace RockWeb.Blocks.Streaks
         public class AttemptViewModel
         {
             public int Id { get; set; }
-            public int? PersonId { get; set; }
-            public string LastName { get; set; }
-            public string NickName { get; set; }
+            public string AchieverName { get; set; }
             public DateTime StartDate { get; set; }
             public DateTime? EndDate { get; set; }
             public bool IsSuccessful { get; set; }
             public bool IsClosed { get; set; }
-            public Person Person { get; set; }
             public decimal Progress { get; set; }
             public string AchievementName { get; set; }
         }
@@ -952,7 +917,7 @@ namespace RockWeb.Blocks.Streaks
             /// <summary>
             /// Gets or sets the person.
             /// </summary>
-            public Person Person { get; set; }
+            public string AchieverName { get; set; }
         }
 
         #endregion View Models

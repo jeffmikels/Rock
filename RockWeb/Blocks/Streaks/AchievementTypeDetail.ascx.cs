@@ -36,7 +36,7 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Blocks.Streaks
 {
     [DisplayName( "Achievement Type Detail" )]
-    [Category( "Streaks" )]
+    [Category( "Achievements" )]
     [Description( "Displays the details of the given Achievement Type for editing." )]
 
     public partial class AchievementTypeDetail : RockBlock, IDetailBlock
@@ -246,6 +246,7 @@ namespace RockWeb.Blocks.Streaks
         {
             RenderComponentAttributeControls();
             SyncComponentConfig();
+            SyncPrerequisiteList();
         }
 
         /// <summary>

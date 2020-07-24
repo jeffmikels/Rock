@@ -46,8 +46,7 @@
                             </Rock:GridFilter>
                             <Rock:Grid ID="gAttempts" runat="server" AllowSorting="true" OnRowDataBound="gAttempts_RowDataBound" ExportSource="ColumnOutput" OnRowSelected="gAttempts_RowSelected" >
                                 <Columns>
-                                    <Rock:RockLiteralField ID="lExportFullName" HeaderText="Name" Visible="false" ExcelExportBehavior="AlwaysInclude" />
-                                    <Rock:RockLiteralField ID="lNameWithHtml" HeaderText="Name" SortExpression="LastName,NickName" ExcelExportBehavior="NeverInclude" />
+                                    <Rock:RockBoundField DataField="AchieverName" HeaderText="Achiever" SortExpression="AchieverName" />
                                     <Rock:RockBoundField DataField="AchievementName" HeaderText="Achievement" />
                                     <Rock:DateTimeField HeaderText="Start Date" DataField="StartDate" SortExpression="StartDate" DataFormatString="{0:d}" />
                                     <Rock:DateTimeField HeaderText="End Date" DataField="EndDate" SortExpression="EndDate" DataFormatString="{0:d}" />

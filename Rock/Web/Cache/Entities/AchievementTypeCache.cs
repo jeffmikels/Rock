@@ -258,6 +258,17 @@ namespace Rock.Web.Cache
                 null;
         }
 
+        /// <summary>
+        /// Gets the achiever entity type cache.
+        /// </summary>
+        /// <value>
+        /// The achiever entity type cache.
+        /// </value>
+        public EntityTypeCache AchieverEntityTypeCache
+        {
+            get => EntityTypeCache.Get( AchieverEntityTypeId );
+        }
+
         #endregion Related Entity Helpers
 
         #region Related Cache Objects
