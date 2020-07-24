@@ -763,7 +763,7 @@ namespace Rock.Model
                 foreach ( var attendancesByPerson in attendancesByPersonList )
                 {
                     try
-                    { 
+                    {
                         var emailMessage = new RockEmailMessage( scheduleReminderSystemEmail );
                         var recipient = attendancesByPerson.Person;
                         var attendances = attendancesByPerson.Attendances;
@@ -922,12 +922,11 @@ namespace Rock.Model
                     a.ScheduleTemplateId,
                     a.ScheduleStartDate,
                     MemberAssignments = a.GroupMemberAssignments
-                        .Where( x => x.ScheduleId.HasValue && x.LocationId.HasValue ).Select( s => new
+                        .Where( x => x.ScheduleId.HasValue ).Select( s => new
                         {
-                            ScheduleId = s.ScheduleId.Value,
-                            ScheduleName = s.Schedule.Name,
-                            LocationId = s.LocationId.Value,
-                            LocationName = s.Location.Name
+                            Schedule = s.Schedule,
+                            LocationId = s.LocationId,
+                            LocationName = s.LocationId.HasValue ? s.Location.Name : null
                         } )
                 } );
 
@@ -1007,13 +1006,17 @@ namespace Rock.Model
                      */
                     GroupMemberId = a.GroupMemberId,
                     GroupRole = groupTypeRoleCacheLookup.GetValueOrNull( a.GroupRoleId ),
-                    ResourceAssignments = a.MemberAssignments.Select( x => new SchedulerResourceAssignment
+                    ResourceAssignments = a.MemberAssignments
+                    .OrderBy( r => r.Schedule.Order )
+                    .ThenBy( r => r.Schedule.GetNextStartDateTime( RockDateTime.Now.Date ) )
+                    .Select( x => new SchedulerResourceAssignment
                     {
-                        ScheduleId = x.ScheduleId,
-                        ScheduleName = x.ScheduleName,
+                        ScheduleId = x.Schedule.Id,
+                        ScheduleName = x.Schedule.Name,
                         LocationId = x.LocationId,
                         LocationName = x.LocationName
-                    } ).ToList(),
+                    } )
+                    .ToList(),
 
                     Note = a.Note,
                     PersonNickName = a.NickName,
@@ -2104,7 +2107,7 @@ namespace Rock.Model
         /// <value>
         /// The location identifier.
         /// </value>
-        public int LocationId { get; set; }
+        public int? LocationId { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the location.

@@ -503,13 +503,19 @@
                     var $resourceAssignmentPreference = $resourceDiv.find('.js-resource-assignment-preference');
                     for (var i = 0; i < schedulerResource.ResourceAssignments.length; i++) {
                         var resourceAssignment = schedulerResource.ResourceAssignments[i];
-                        $resourceAssignmentPreference.append('<div class="resource-assignment">'
+                        var preferenceHtml = '<div class="resource-assignment">'
                             + '<span class="resource-assignment-schedule">'
                             + resourceAssignment.ScheduleName
-                            + '</span>' + '<span class="resource-assignment-location">'
-                            + resourceAssignment.LocationName
-                            + '</span>'
-                            + '</div>');
+                            + '</span>';
+
+                        if (resourceAssignment.LocationName) {
+                            preferenceHtml += ' - ' + '<span class="resource-assignment-location">'
+                                + resourceAssignment.LocationName
+                                + '</span>'
+                                + '</div>';
+                        }
+
+                        $resourceAssignmentPreference.append(preferenceHtml);
                     }
                 }
 

@@ -489,7 +489,6 @@ btnCopyToClipboard.ClientID );
             }
             else
             {
-
                 groupMemberFilterType = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.GroupMemberFilterType, UserPreferenceKey.GroupMemberFilterType ).ConvertToEnumOrNull<SchedulerResourceGroupMemberFilterType>() ?? SchedulerResourceGroupMemberFilterType.ShowAllGroupMembers;
             }
 
@@ -584,6 +583,13 @@ btnCopyToClipboard.ClientID );
         {
             var authorizedListedGroups = this.GetAuthorizedListedGroups();
 
+            OccurrenceDisplayMode occurrenceDisplayMode = GetOccurrenceDisplayMode( authorizedListedGroups );
+
+            pnlSendNowMultiGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
+            btnSendNowSingleGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
+            pnlAutoScheduleMultiGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
+            btnAutoScheduleSingleGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
+
             List<int> listedGroupIds = authorizedListedGroups.Select( a => a.Id ).ToList();
 
             int? selectedGroupId = null;
@@ -663,7 +669,6 @@ btnCopyToClipboard.ClientID );
                 schedulerResourceListSourceTypes = sameGroupSourceTypes.ToList();
                 pnlAddPerson.Visible = false;
                 ppAddPerson.Visible = false;
-
 
                 if ( !sameGroupSourceTypes.Contains( resourceListSourceType ) )
                 {
@@ -795,6 +800,26 @@ btnCopyToClipboard.ClientID );
         }
 
         /// <summary>
+        /// Gets the occurrence display mode based on the number of groups that we are showing
+        /// </summary>
+        /// <param name="authorizedListedGroups">The authorized listed groups.</param>
+        /// <returns></returns>
+        private static OccurrenceDisplayMode GetOccurrenceDisplayMode( List<Group> authorizedListedGroups )
+        {
+            OccurrenceDisplayMode occurrenceDisplayMode;
+            if ( authorizedListedGroups.Count > 1 )
+            {
+                occurrenceDisplayMode = OccurrenceDisplayMode.MultiGroup;
+            }
+            else
+            {
+                occurrenceDisplayMode = OccurrenceDisplayMode.SingleGroup;
+            }
+
+            return occurrenceDisplayMode;
+        }
+
+        /// <summary>
         /// Validates the filter and shows filter warnings if the filter is not valid
         /// </summary>
         /// <param name="authorizedListedGroups">The authorized listed groups.</param>
@@ -852,7 +877,6 @@ btnCopyToClipboard.ClientID );
             }
             else if ( !listedLocations.Any() )
             {
-
                 // if there are schedules, but no locations, warn about lack of schedules
                 if ( hasMultipleGroupsSelected )
                 {
@@ -1132,20 +1156,7 @@ btnCopyToClipboard.ClientID );
             IQueryable<AttendanceOccurrenceService.AttendanceOccurrenceGroupLocationScheduleConfigJoinResult> attendanceOccurrenceGroupLocationScheduleConfigQuery
                 = attendanceOccurrenceService.AttendanceOccurrenceGroupLocationScheduleConfigJoinQuery( occurrenceDateList, scheduleIds, selectedGroupLocationIds );
 
-            OccurrenceDisplayMode occurrenceDisplayMode;
-            if ( authorizedListedGroups.Count > 1 )
-            {
-                occurrenceDisplayMode = OccurrenceDisplayMode.MultiGroup;
-            }
-            else
-            {
-                occurrenceDisplayMode = OccurrenceDisplayMode.SingleGroup;
-            }
-
-            pnlSendNowMultiGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
-            btnSendNowSingleGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
-            pnlAutoScheduleMultiGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.MultiGroup;
-            btnAutoScheduleSingleGroupMode.Visible = occurrenceDisplayMode == OccurrenceDisplayMode.SingleGroup;
+            OccurrenceDisplayMode occurrenceDisplayMode = GetOccurrenceDisplayMode( authorizedListedGroups );
 
             var attendanceOccurrencesList = attendanceOccurrenceGroupLocationScheduleConfigQuery.AsNoTracking()
                 .Select( a => new AttendanceOccurrenceRowItem
@@ -1559,7 +1570,6 @@ btnCopyToClipboard.ClientID );
 
             // hide the status labels if is the one that doesn't have a Location assigned
             pnlStatusLabels.Visible = hasLocation;
-
 
             var pnlMultiGroupModePanelHeading = e.Item.FindControl( "pnlMultiGroupModePanelHeading" ) as Panel;
             var lMultiGroupModeLocationTitle = e.Item.FindControl( "lMultiGroupModeLocationTitle" ) as Literal;
@@ -2140,38 +2150,114 @@ btnCopyToClipboard.ClientID );
 
             var scheduleId = attendanceOccurrence.ScheduleId;
             var locationId = attendanceOccurrence.LocationId;
+            var groupId = attendanceOccurrence.GroupId;
 
             GroupMemberAssignmentService groupMemberAssignmentService = new GroupMemberAssignmentService( rockContext );
             var groupMemberAssignmentQuery = groupMemberAssignmentService.Queryable();
 
-            var preferenceForSchedule = groupMemberAssignmentQuery
-                .Where( a =>
-                    a.GroupMemberId == groupMemberId
-                    && a.ScheduleId == scheduleId
-                    ).FirstOrDefault();
+            var groupMemberPersonId = groupMember.PersonId;
 
-            nbGroupScheduleAssignmentWarning.Visible = false;
+            /* 2020-07-23 MDP
+             *  Note that an Attendance record is for a Person, not a GroupMemberId, so GroupMemberId would be whatever GroupMember record was found for this 
+             *  Person in the Occurrence group.
+             *  So, f the person is in the group multiple times, the groupMember record would be first group member record for that person, sorted by GroupTypeRole.Order. 
+             *  But, they could have preferences for multiple group members records, so lookup by personId instead of GroupMemberId
+             */
+            var preferencesForGroup = groupMemberAssignmentQuery
+                .Where( a => a.GroupMember.GroupId == groupId && a.GroupMember.PersonId == groupMemberPersonId )
+                .ToList();
+
+            nbGroupScheduleAssignmentUpdatePreferenceInformation.Text = string.Empty;
+
+            var otherPreferencesForGroup = preferencesForGroup
+                    .Where( a => a.ScheduleId != scheduleId && ( !a.LocationId.HasValue || a.LocationId == locationId ) );
+
+            if ( otherPreferencesForGroup.Any() )
+            {
+                var currentSchedulePreferencesHTMLBuilder = new StringBuilder();
+                currentSchedulePreferencesHTMLBuilder.AppendLine( "<span class='control-label'>These other preferences will be removed and replaced.</span>" );
+                currentSchedulePreferencesHTMLBuilder.AppendLine( "<ul>" );
+                var occurrenceDate = RockDateTime.Now.SundayDate().AddDays( 1 );
+                var otherPreferencesSortedBySchedule = otherPreferencesForGroup
+                    .OrderBy( a => a.Schedule.Order )
+                    .ThenBy( a => a.Schedule.GetNextStartDateTime( occurrenceDate ) )
+                    .ThenBy( a => a.Schedule.Name )
+                    .ThenBy( a => a.Schedule.Id )
+                    .ToList();
+
+                foreach ( var otherPreferenceForGroup in otherPreferencesSortedBySchedule )
+                {
+                    string locationPreference;
+                    if ( otherPreferenceForGroup.Location == null )
+                    {
+                        locationPreference = "No Location Preference";
+                    }
+                    else
+                    {
+                        locationPreference = otherPreferenceForGroup.Location.Name;
+                    }
+
+                    currentSchedulePreferencesHTMLBuilder.AppendLine( string.Format( "<li>{0} - {1}</li>", otherPreferenceForGroup.Schedule.Name, locationPreference ) );
+                }
+
+                currentSchedulePreferencesHTMLBuilder.AppendLine( "</ul>" );
+
+                nbGroupScheduleAssignmentUpdatePreferenceInformation.Text = currentSchedulePreferencesHTMLBuilder.ToString();
+            }
+            else
+            {
+                nbGroupScheduleAssignmentUpdatePreferenceInformation.Text = string.Empty;
+            }
+
+            mdGroupScheduleAssignmentPreference.SubTitle = string.Format( "{0}, {1} - {2} ", groupMember.Person, attendanceOccurrence.Schedule.Name, attendanceOccurrence.Location.Name );
+
+            //lGroupScheduleAssignmentScheduleAndLocation.Text = 
+
+            nbGroupScheduleAssignmentUpdatePreferenceInformation.Visible = rblGroupScheduleAssignmentUpdateOption.SelectedValue == "UpdatePreference";
+
+            var preferenceForSchedule = preferencesForGroup.Where( a => a.ScheduleId == scheduleId ).FirstOrDefault();
+
+            nbGroupScheduleAssignmentScheduleWarning.Visible = false;
 
             if ( preferenceForSchedule != null )
             {
-                if ( preferenceForSchedule.LocationId == locationId )
+                if ( preferenceForSchedule.LocationId.HasValue && preferenceForSchedule.LocationId.Value == locationId )
                 {
-                    nbGroupScheduleAssignmentWarning.Visible = true;
-                    nbGroupScheduleAssignmentWarning.Text = "This person already has this location as their preference for this schedule";
+                    nbGroupScheduleAssignmentScheduleWarning.Visible = true;
+                    nbGroupScheduleAssignmentScheduleWarning.Text = "This person already has this location as their preference for this schedule.";
                 }
                 else
                 {
-                    nbGroupScheduleAssignmentWarning.Visible = true;
-                    nbGroupScheduleAssignmentWarning.Text = "This person already has a preference for the same schedule";
+                    string locationPreference;
+                    if ( preferenceForSchedule.Location == null )
+                    {
+                        locationPreference = "No Location Preference";
+                    }
+                    else
+                    {
+                        locationPreference = preferenceForSchedule.Location.Name;
+                    }
+
+                    nbGroupScheduleAssignmentScheduleWarning.Visible = true;
+                    nbGroupScheduleAssignmentScheduleWarning.Text = string.Format( "This person currently has {0} as the preference for this schedule.", locationPreference );
                 }
             }
-
 
             hfGroupScheduleAssignmentGroupMemberId.Value = groupMemberId.ToString();
             hfGroupScheduleAssignmentLocationId.Value = locationId.ToString();
             hfGroupScheduleAssignmentScheduleId.Value = scheduleId.ToString();
 
             mdGroupScheduleAssignmentPreference.Show();
+        }
+
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the rblGroupScheduleAssignmentUpdateOption control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void rblGroupScheduleAssignmentUpdateOption_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            nbGroupScheduleAssignmentUpdatePreferenceInformation.Visible = rblGroupScheduleAssignmentUpdateOption.SelectedValue == "UpdatePreference";
         }
 
         /// <summary>
@@ -2186,10 +2272,6 @@ btnCopyToClipboard.ClientID );
             var locationId = hfGroupScheduleAssignmentLocationId.Value.AsIntegerOrNull();
             var scheduleId = hfGroupScheduleAssignmentScheduleId.Value.AsIntegerOrNull();
 
-            var rockContext = new RockContext();
-
-            GroupMemberAssignmentService groupMemberAssignmentService = new GroupMemberAssignmentService( rockContext );
-            var groupMemberAssignmentQuery = groupMemberAssignmentService.Queryable();
 
             if ( !locationId.HasValue || !scheduleId.HasValue || !groupMemberId.HasValue )
             {
@@ -2197,9 +2279,32 @@ btnCopyToClipboard.ClientID );
                 return;
             }
 
+            var rockContext = new RockContext();
+
+            var groupMemberService = new GroupMemberService( rockContext );
+
+            var groupMember = groupMemberService.Get( groupMemberId.Value );
+
+            if ( groupMember == null )
+            {
+                // shouldn't happen
+                return;
+            }
+
+            GroupMemberAssignmentService groupMemberAssignmentService = new GroupMemberAssignmentService( rockContext );
+            var groupMemberAssignmentQuery = groupMemberAssignmentService.Queryable();
+
+            /* 2020-07-23 MDP
+             *  Note that an Attendance record is for a Person, not a GroupMemberId, so GroupMemberId would be whatever GroupMember record was found for this 
+             *  Person in the Occurrence group.
+             *  So, f the person is in the group multiple times, the groupMember record would be first group member record for that person, sorted by GroupTypeRole.Order. 
+             *  But, they could have preferences for multiple group members records, so lookup by personId instead of GroupMemberId
+             */
+            int groupMemberPersonId = groupMember.PersonId;
+
             var locationPreferenceForSchedule = groupMemberAssignmentQuery
                 .Where( a =>
-                    a.GroupMemberId == groupMemberId.Value
+                    a.GroupMember.PersonId == groupMemberPersonId
                     && a.ScheduleId.HasValue
                     && a.ScheduleId == scheduleId.Value ).FirstOrDefault();
 
@@ -2213,27 +2318,28 @@ btnCopyToClipboard.ClientID );
 
             locationPreferenceForSchedule.LocationId = locationId.Value;
 
+            /* 2020-07-23 MDP
+                 - 'Update Preference' means that the selected Schedule/Location is now their *only* preference for this Group. 
+                    So, if they have preferences for other schedules for this group, delete them
+                    see https://app.asana.com/0/0/1185765604320009/f
+
+                - 'Append to Preference' means that we are just adding (or updating) the location preference for the selected schedule
+             */
 
             if ( rblGroupScheduleAssignmentUpdateOption.SelectedValue == "UpdatePreference" )
             {
-                // TODO: remove all other schedule preferences ???
+                // Remove all other schedule preferences that this person has for this group (see https://app.asana.com/0/0/1185765604320009/f)
                 var otherPreferencesForGroup = groupMemberAssignmentQuery
                     .Where( a =>
-                        a.GroupMemberId == groupMemberId.Value
+                        a.GroupMember.PersonId == groupMemberPersonId
                         && a.ScheduleId != scheduleId.Value )
                     .ToList();
-
 
                 if ( otherPreferencesForGroup.Any() )
                 {
                     groupMemberAssignmentService.DeleteRange( otherPreferencesForGroup );
                 }
-
             }
-            else if ( rblGroupScheduleAssignmentUpdateOption.SelectedValue == "AppendToPreference" )
-            {
-                // TODO: just add (replace) the preference for this schedule to be the selected location ???
-            } 
 
             rockContext.SaveChanges();
         }

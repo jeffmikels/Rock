@@ -487,11 +487,15 @@
                         <asp:HiddenField ID="hfGroupScheduleAssignmentGroupMemberId" runat="server" />
                         <asp:HiddenField ID="hfGroupScheduleAssignmentScheduleId" runat="server" />
                         <asp:HiddenField ID="hfGroupScheduleAssignmentLocationId" runat="server" />
-                        <Rock:RockRadioButtonList ID="rblGroupScheduleAssignmentUpdateOption" runat="server" RepeatDirection="Horizontal">
+
+                        <Rock:NotificationBox ID="nbGroupScheduleAssignmentScheduleWarning" runat="server" NotificationBoxType="Warning" Visible="false" />
+
+                        <Rock:RockRadioButtonList ID="rblGroupScheduleAssignmentUpdateOption" runat="server" RepeatDirection="Horizontal" AutoPostBack="true" OnSelectedIndexChanged="rblGroupScheduleAssignmentUpdateOption_SelectedIndexChanged">
                             <asp:ListItem Text="Update Preference" Value="UpdatePreference" Selected="true" />
                             <asp:ListItem Text="Append to preference" Value="AppendToPreference" />
                         </Rock:RockRadioButtonList>
-                        <Rock:NotificationBox ID="nbGroupScheduleAssignmentWarning" runat="server" NotificationBoxType="Warning" Visible="false" />
+                        
+                        <Rock:NotificationBox ID="nbGroupScheduleAssignmentUpdatePreferenceInformation" runat="server" NotificationBoxType="Info" Visible="false" CssClass="margin-t-md" />
                     </Content>
                 </Rock:ModalDialog>
 
