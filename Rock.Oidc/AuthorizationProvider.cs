@@ -30,6 +30,11 @@ namespace Rock.Oidc
     /// <seealso cref="OpenIdConnectServerProvider" />
     public class AuthorizationProvider : OpenIdConnectServerProvider
     {
+        public override Task HandleTokenRequest( HandleTokenRequestContext context )
+        {
+            return base.HandleTokenRequest( context );
+        }
+
         /// <summary>
         /// Represents an event called for each request to the authorization endpoint
         /// to determine if the request is valid and should continue.

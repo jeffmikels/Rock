@@ -16,6 +16,7 @@
 //
 using System;
 using System.Data.Entity;
+using System.Linq;
 using System.Threading.Tasks;
 using Rock.Security;
 using Rock.Web.Cache;
@@ -35,6 +36,11 @@ namespace Rock.Model
         public async Task<AuthClient> GetByClientId( string clientId )
         {
             return await Queryable().AsNoTracking().FirstOrDefaultAsync( ac => ac.ClientId == clientId );
+        }
+
+        public AuthClient GetByClientIdNonAsync( string clientId )
+        {
+            return Queryable().AsNoTracking().FirstOrDefault( ac => ac.ClientId == clientId );
         }
 
         /// <summary>

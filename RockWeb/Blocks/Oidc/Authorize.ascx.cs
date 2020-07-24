@@ -22,11 +22,12 @@ using System.Linq.Dynamic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
-using AspNet.Security.OpenIdConnect.Extensions;
 using AspNet.Security.OpenIdConnect.Primitives;
 using AspNet.Security.OpenIdConnect.Server;
+using Microsoft.Owin.Security;
 using OpenXmlPowerTools;
 using Owin;
+using Owin.Security.OpenIdConnect.Extensions;
 using Rock;
 using Rock.Data;
 using Rock.Model;
@@ -86,12 +87,13 @@ namespace RockWeb.Blocks.Oidc
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
-            AcceptAuthorization();
+            //AcceptAuthorization();
+            auth();
             var acceptValue = PageParameter( PageParamKey.Accept );
 
             if ( !Page.IsPostBack && !acceptValue.IsNullOrWhiteSpace() )
             {
-                AcceptAuthorization();
+                //AcceptAuthorization();
             }
             else if ( !Page.IsPostBack )
             {
@@ -270,12 +272,105 @@ namespace RockWeb.Blocks.Oidc
         protected void btnAllow_Click( object sender, EventArgs e )
         {
             var queryParams = PageParameters().ToDictionary( kvp => kvp.Key, kvp => kvp.Value.ToString() );
+            var owinContext = Context.GetOwinContext();
+            var request = owinContext.GetOpenIdConnectRequest();
 
+            // Create a new ClaimsIdentity containing the claims that
+            // will be used to create an id_token, a token or a code.
+            var identity = new ClaimsIdentity( OpenIdConnectServerDefaults.AuthenticationScheme );
+
+            // Copy the unique identifier associated with the logged-in user to the new identity.
+            // Note: the subject is always included in both identity and access tokens,
+            // even if an explicit destination is not explicitly specified.
+            identity.AddClaim( OpenIdConnectConstants.Claims.Subject, CurrentUser.UserName );
+
+            var rockContext = new RockContext();
+            var authClientService = new AuthClientService( rockContext );
+            var authClientId = PageParameter( PageParamKey.ClientId );
+            var authClient = authClientService.GetByClientIdNonAsync( authClientId );
+
+            if ( authClient == null )
+            {
+                // TODO: Error
+                return;
+            }
+
+            // Create a new authentication ticket holding the user identity.
+            var ticket = new AuthenticationTicket(identity, new AuthenticationProperties() );
+
+            // Set the list of scopes granted to the client application.
+            // Note: this sample always grants the "openid", "email" and "profile" scopes
+            // when they are requested by the client application: a real world application
+            // would probably display a form allowing to select the scopes to grant.
+            ticket.SetScopes(
+                /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
+                /* email: */ OpenIdConnectConstants.Scopes.Email,
+                /* profile: */ OpenIdConnectConstants.Scopes.Profile );
+            // Set the resource servers the access token should be issued for.
+            ticket.SetResources( "resource_server" );
+
+            // Returning a SignInResult will ask ASOS to serialize the specified identity
+            // to build appropriate tokens. You should always make sure the identities
+            // you return contain the OpenIdConnectConstants.Claims.Subject claim. In this sample,
+            // the identity always contains the name identifier returned by the external provider.
+
+            Response.Clear();
+            owinContext.Authentication.SignIn( ticket.Properties, identity );
+            Response.End();
             //var queryStringBytes = System.Text.Encoding.UTF8.GetBytes( queryParams.ToJson() );
             //var base64QueryString = Convert.ToBase64String( queryStringBytes );
             //queryParams[PageParamKey.Accept] = base64QueryString;
 
-            NavigateToCurrentPage( queryParams );
+            //NavigateToCurrentPage( queryParams );
+        }
+        private void auth()
+        {
+            var queryParams = PageParameters().ToDictionary( kvp => kvp.Key, kvp => kvp.Value.ToString() );
+            var owinContext = Context.GetOwinContext();
+            var request = owinContext.GetOpenIdConnectRequest();
+
+            // Create a new ClaimsIdentity containing the claims that
+            // will be used to create an id_token, a token or a code.
+            var identity = new ClaimsIdentity( OpenIdConnectServerDefaults.AuthenticationScheme );
+
+            // Copy the unique identifier associated with the logged-in user to the new identity.
+            // Note: the subject is always included in both identity and access tokens,
+            // even if an explicit destination is not explicitly specified.
+            identity.AddClaim( OpenIdConnectConstants.Claims.Subject, CurrentUser.UserName );
+
+            var rockContext = new RockContext();
+            var authClientService = new AuthClientService( rockContext );
+            var authClientId = PageParameter( PageParamKey.ClientId );
+            var authClient = authClientService.GetByClientIdNonAsync( authClientId );
+
+            if ( authClient == null )
+            {
+                // TODO: Error
+                return;
+            }
+
+            // Create a new authentication ticket holding the user identity.
+            var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );
+
+            // Set the list of scopes granted to the client application.
+            // Note: this sample always grants the "openid", "email" and "profile" scopes
+            // when they are requested by the client application: a real world application
+            // would probably display a form allowing to select the scopes to grant.
+            ticket.SetScopes(
+                /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
+                /* email: */ OpenIdConnectConstants.Scopes.Email,
+                /* profile: */ OpenIdConnectConstants.Scopes.Profile );
+            // Set the resource servers the access token should be issued for.
+            ticket.SetResources( "resource_server" );
+
+            // Returning a SignInResult will ask ASOS to serialize the specified identity
+            // to build appropriate tokens. You should always make sure the identities
+            // you return contain the OpenIdConnectConstants.Claims.Subject claim. In this sample,
+            // the identity always contains the name identifier returned by the external provider.
+
+            Response.Clear();
+            owinContext.Authentication.SignIn( ticket.Properties, identity );
+            Response.End();
         }
 
         /// <summary>
