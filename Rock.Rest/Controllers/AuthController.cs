@@ -81,5 +81,19 @@ namespace Rock.Rest.Controllers
 
             return component.Authenticate( userLogin, loginParameters.Password );
         }
+
+        [Authorize]
+        [HttpGet]
+        [System.Web.Http.Route( "api/Auth/Validate" )]
+        public string Validate()
+        {
+            var identity = User.Identity as ClaimsIdentity;
+            if ( identity == null )
+            {
+                return "BadRequest";
+            }
+
+            return $"{identity.Name} has been successfully authenticated.";
+        }
     }
 }

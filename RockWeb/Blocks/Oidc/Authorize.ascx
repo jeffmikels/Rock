@@ -13,7 +13,9 @@
                 </h1>
             </div>
             <div class="panel-body">
-                <p>Would you like to grant <asp:Literal ID="lClientName" runat="server" /> access to your information:</p>
+                <p>Would you like to grant
+                    <asp:Literal ID="lClientName" runat="server" />
+                    access to your information:</p>
 
                 <ul>
                     <asp:Repeater ID="rScopes" runat="server">
@@ -24,8 +26,8 @@
                 </ul>
 
                 <div class="actions">
-                    <asp:LinkButton ID="btnAccept" runat="server" Text="Yes" CssClass="btn btn-success" OnClick="btnAllow_Click" />
-                    <asp:LinkButton ID="btnDeny" runat="server" Text="No" CssClass="btn btn-default" OnClick="btnDeny_Click" />
+                    <a href="<%= Request.RawUrl %>&action=approve" class="btn btn-success">Yes</a>
+                    <a href="<%= Request.RawUrl %>&action=deny" class="btn btn-success">No</a>
                 </div>
             </div>
         </asp:Panel>

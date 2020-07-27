@@ -64,7 +64,7 @@ namespace RockWeb.Blocks.Oidc
             /// <summary>
             /// The accept
             /// </summary>
-            public const string Accept = "accept";
+            public const string Action = "action";
         }
 
         #endregion Keys
@@ -87,22 +87,25 @@ namespace RockWeb.Blocks.Oidc
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
-            //AcceptAuthorization();
-            auth();
-            var acceptValue = PageParameter( PageParamKey.Accept );
 
-            if ( !Page.IsPostBack && !acceptValue.IsNullOrWhiteSpace() )
+            // We have to use querystring, because something in the .net postback chain writes to the Response object which breaks the auth call.
+            var action = PageParameter( PageParamKey.Action );
+
+            switch ( action )
             {
-                //AcceptAuthorization();
+                case "approve":
+                    AcceptAuthorization();
+                    return;
+                case "deny":
+                    DenyAuthorization();
+                    return;
             }
-            else if ( !Page.IsPostBack )
+
+            Task.Run( async () =>
             {
-                Task.Run( async () =>
-                {
-                    await BindClientName();
-                    BindScopes();
-                } ).Wait();
-            }
+                await BindClientName();
+                BindScopes();
+            } ).Wait();
         }
 
         #endregion Base Control Methods
@@ -124,7 +127,7 @@ namespace RockWeb.Blocks.Oidc
         /// <summary>
         /// Accepts the authorization.
         /// </summary>
-        private void AcceptAuthorization()
+        private void AcceptAuthorization_prev()
         {
             var owinContext = Context.GetOwinContext();
 
@@ -220,9 +223,10 @@ namespace RockWeb.Blocks.Oidc
         private void BindScopes()
         {
             var scopes = GetRequestedScopes();
-            var scopeViewModels = scopes.Select( s => new ScopeViewModel {
+            var scopeViewModels = scopes.Select( s => new ScopeViewModel
+            {
                 Name = s
-            }  );
+            } );
 
             rScopes.DataSource = scopeViewModels;
             rScopes.DataBind();
@@ -262,81 +266,30 @@ namespace RockWeb.Blocks.Oidc
 
         #endregion Data Access
 
-        #region Events
+        #region Private Methods
 
-        /// <summary>
-        /// Handles the Click event of the btnAllow control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void btnAllow_Click( object sender, EventArgs e )
+        private void AcceptAuthorization()
         {
-            var queryParams = PageParameters().ToDictionary( kvp => kvp.Key, kvp => kvp.Value.ToString() );
             var owinContext = Context.GetOwinContext();
             var request = owinContext.GetOpenIdConnectRequest();
 
             // Create a new ClaimsIdentity containing the claims that
             // will be used to create an id_token, a token or a code.
-            var identity = new ClaimsIdentity( OpenIdConnectServerDefaults.AuthenticationScheme );
+            var identity = new ClaimsIdentity(
+                OpenIdConnectServerDefaults.AuthenticationScheme,
+                OpenIdConnectConstants.Claims.Name,
+                OpenIdConnectConstants.Claims.Role );
 
-            // Copy the unique identifier associated with the logged-in user to the new identity.
-            // Note: the subject is always included in both identity and access tokens,
-            // even if an explicit destination is not explicitly specified.
-            identity.AddClaim( OpenIdConnectConstants.Claims.Subject, CurrentUser.UserName );
+            // Note: the "sub" claim is mandatory and an exception is thrown if this claim is missing.
+            identity.AddClaim(
+                new Claim( OpenIdConnectConstants.Claims.Subject, CurrentUser.UserName )
+                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
 
-            var rockContext = new RockContext();
-            var authClientService = new AuthClientService( rockContext );
-            var authClientId = PageParameter( PageParamKey.ClientId );
-            var authClient = authClientService.GetByClientIdNonAsync( authClientId );
-
-            if ( authClient == null )
-            {
-                // TODO: Error
-                return;
-            }
-
-            // Create a new authentication ticket holding the user identity.
-            var ticket = new AuthenticationTicket(identity, new AuthenticationProperties() );
-
-            // Set the list of scopes granted to the client application.
-            // Note: this sample always grants the "openid", "email" and "profile" scopes
-            // when they are requested by the client application: a real world application
-            // would probably display a form allowing to select the scopes to grant.
-            ticket.SetScopes(
-                /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
-                /* email: */ OpenIdConnectConstants.Scopes.Email,
-                /* profile: */ OpenIdConnectConstants.Scopes.Profile );
-            // Set the resource servers the access token should be issued for.
-            ticket.SetResources( "resource_server" );
-
-            // Returning a SignInResult will ask ASOS to serialize the specified identity
-            // to build appropriate tokens. You should always make sure the identities
-            // you return contain the OpenIdConnectConstants.Claims.Subject claim. In this sample,
-            // the identity always contains the name identifier returned by the external provider.
-
-            Response.Clear();
-            owinContext.Authentication.SignIn( ticket.Properties, identity );
-            Response.End();
-            //var queryStringBytes = System.Text.Encoding.UTF8.GetBytes( queryParams.ToJson() );
-            //var base64QueryString = Convert.ToBase64String( queryStringBytes );
-            //queryParams[PageParamKey.Accept] = base64QueryString;
-
-            //NavigateToCurrentPage( queryParams );
-        }
-        private void auth()
-        {
-            var queryParams = PageParameters().ToDictionary( kvp => kvp.Key, kvp => kvp.Value.ToString() );
-            var owinContext = Context.GetOwinContext();
-            var request = owinContext.GetOpenIdConnectRequest();
-
-            // Create a new ClaimsIdentity containing the claims that
-            // will be used to create an id_token, a token or a code.
-            var identity = new ClaimsIdentity( OpenIdConnectServerDefaults.AuthenticationScheme );
-
-            // Copy the unique identifier associated with the logged-in user to the new identity.
-            // Note: the subject is always included in both identity and access tokens,
-            // even if an explicit destination is not explicitly specified.
-            identity.AddClaim( OpenIdConnectConstants.Claims.Subject, CurrentUser.UserName );
+            identity.AddClaim(
+                new Claim( OpenIdConnectConstants.Claims.Name, CurrentUser.Person.FullName )
+                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
 
             var rockContext = new RockContext();
             var authClientService = new AuthClientService( rockContext );
@@ -356,10 +309,12 @@ namespace RockWeb.Blocks.Oidc
             // Note: this sample always grants the "openid", "email" and "profile" scopes
             // when they are requested by the client application: a real world application
             // would probably display a form allowing to select the scopes to grant.
-            ticket.SetScopes(
+            ticket.SetScopes( new[] {
                 /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
                 /* email: */ OpenIdConnectConstants.Scopes.Email,
-                /* profile: */ OpenIdConnectConstants.Scopes.Profile );
+                /* profile: */ OpenIdConnectConstants.Scopes.Profile
+            }.Intersect( request.GetScopes() ) );
+
             // Set the resource servers the access token should be issued for.
             ticket.SetResources( "resource_server" );
 
@@ -368,19 +323,7 @@ namespace RockWeb.Blocks.Oidc
             // you return contain the OpenIdConnectConstants.Claims.Subject claim. In this sample,
             // the identity always contains the name identifier returned by the external provider.
 
-            Response.Clear();
             owinContext.Authentication.SignIn( ticket.Properties, identity );
-            Response.End();
-        }
-
-        /// <summary>
-        /// Handles the Click event of the btnDeny control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void btnDeny_Click( object sender, EventArgs e )
-        {
-            
         }
 
         #endregion Events
