@@ -30,11 +30,7 @@ namespace Rock.Oidc
         /// <param name="app"></param>
         public static void OnStartup( IAppBuilder app )
         {
-            //var oAuthOptions = new OAuthValidationOptions();
-
-            //app.Use<OAuthValidationMiddleware>( app.Properties, oAuthOptions );
-
-            app.UseOAuthValidation(  );
+            app.UseOAuthValidation();
 
             app.UseOpenIdConnectServer( options =>
             {
