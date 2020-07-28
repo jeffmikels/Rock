@@ -15,7 +15,9 @@
 // </copyright>
 //
 
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Owin;
+using Microsoft.Owin.Security;
 using Owin;
 
 namespace Rock.Oidc
@@ -28,6 +30,12 @@ namespace Rock.Oidc
         /// <param name="app"></param>
         public static void OnStartup( IAppBuilder app )
         {
+            //var oAuthOptions = new OAuthValidationOptions();
+
+            //app.Use<OAuthValidationMiddleware>( app.Properties, oAuthOptions );
+
+            app.UseOAuthValidation(  );
+
             app.UseOpenIdConnectServer( options =>
             {
                 options.Provider = new AuthorizationProvider();
