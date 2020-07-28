@@ -432,6 +432,22 @@ namespace RockWeb.Blocks.Streaks
         private PersonAliasService _personAliasService = null;
 
         /// <summary>
+        /// Gets the entity type service.
+        /// </summary>
+        /// <returns></returns>
+        private EntityTypeService GetEntityTypeService()
+        {
+            if ( _entityTypeService == null )
+            {
+                var rockContext = GetRockContext();
+                _entityTypeService = new EntityTypeService( rockContext );
+            }
+
+            return _entityTypeService;
+        }
+        private EntityTypeService _entityTypeService = null;
+
+        /// <summary>
         /// Gets the streak service.
         /// </summary>
         /// <returns></returns>
@@ -808,7 +824,7 @@ namespace RockWeb.Blocks.Streaks
                     ( aa, pa ) => new JoinedQueryViewModel
                     {
                         AchievementAttempt = aa,
-                        AchieverName = pa.Person.FullName
+                        Achiever = pa.Person
                     } );
             }
             else if ( isAchieverPersonAlias )
@@ -820,46 +836,58 @@ namespace RockWeb.Blocks.Streaks
                     ( aa, pa ) => new JoinedQueryViewModel
                     {
                         AchievementAttempt = aa,
-                        AchieverName = pa.Person.FullName
+                        Achiever = pa.Person
                     } );
             }
             else
             {
-                joinedQuery = query.Select( aa => new JoinedQueryViewModel
-                {
-                    AchievementAttempt = aa,
-                    AchieverName = achieverEntityTypeCache.FriendlyName + " " + aa.AchieverEntityId
-                } );
+                var entityTypeService = GetEntityTypeService();
+                var achieverQuery = entityTypeService
+                    .GetEntitiesQuery(
+                        achievementType.AchieverEntityTypeId,
+                        achievementType.SourceEntityQualifierColumn,
+                        achievementType.SourceEntityQualifierValue )
+                    .AsNoTracking();
+
+                joinedQuery = query.Join(
+                    achieverQuery,
+                    aa => aa.AchieverEntityId,
+                    a => a.Id,
+                    ( aa, a ) => new JoinedQueryViewModel
+                    {
+                        AchievementAttempt = aa,
+                        Achiever = a
+                    } );
             }
 
-            var viewModelQuery = joinedQuery.Select( aa => new AttemptViewModel
+            var viewModels = joinedQuery.ToList().Select( aa => new AttemptViewModel
             {
                 Id = aa.AchievementAttempt.Id,
-                AchieverName = aa.AchieverName,
+                AchieverName = aa.Achiever.ToStringSafe(),
                 StartDate = aa.AchievementAttempt.AchievementAttemptStartDateTime,
                 EndDate = aa.AchievementAttempt.AchievementAttemptEndDateTime,
                 IsSuccessful = aa.AchievementAttempt.IsSuccessful,
                 IsClosed = aa.AchievementAttempt.IsClosed,
                 Progress = aa.AchievementAttempt.Progress,
                 AchievementName = aa.AchievementAttempt.AchievementType.Name
-            } );
+            } ).AsQueryable();
 
             // Sort the grid
             var sortProperty = gAttempts.SortProperty;
 
             if ( sortProperty != null )
             {
-                viewModelQuery = viewModelQuery.Sort( sortProperty );
+                viewModels = viewModels.Sort( sortProperty );
             }
             else
             {
-                viewModelQuery = viewModelQuery
+                viewModels = viewModels
                     .OrderBy( avm => avm.IsClosed )
                     .OrderByDescending( avm => avm.StartDate )
                     .ThenBy( avm => avm.AchieverName );
             }
 
-            gAttempts.SetLinqDataSource( viewModelQuery );
+            gAttempts.SetLinqDataSource( viewModels );
             gAttempts.DataBind();
         }
 
@@ -915,9 +943,9 @@ namespace RockWeb.Blocks.Streaks
             public AchievementAttempt AchievementAttempt { get; set; }
 
             /// <summary>
-            /// Gets or sets the person.
+            /// Gets or sets the achiever.
             /// </summary>
-            public string AchieverName { get; set; }
+            public IEntity Achiever { get; set; }
         }
 
         #endregion View Models

@@ -7,9 +7,10 @@
         
         <div class="panel panel-block">
             <div class="panel-heading">
-                <h1 class="panel-title"><i class="fa fa-medal"></i>
-                    <asp:Literal ID="lTitlePrefix" runat="server" />
-                    Achievement Types</h1>
+                <h1 class="panel-title">
+                    <i class="fa fa-medal"></i>
+                    Achievement Types
+                </h1>
             </div>
             <div class="panel-body">
 

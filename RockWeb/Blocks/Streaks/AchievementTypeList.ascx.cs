@@ -64,11 +64,6 @@ namespace RockWeb.Blocks.Streaks
             /// The streak type achievement type identifier
             /// </summary>
             public const string AchievementTypeId = "AchievementTypeId";
-
-            /// <summary>
-            /// The streak type identifier
-            /// </summary>
-            public const string StreakTypeId = "StreakTypeId";
         }
 
         #endregion Keys
@@ -82,8 +77,6 @@ namespace RockWeb.Blocks.Streaks
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
-
-            SetTitlePrefix();
 
             gAchievements.DataKeyNames = new string[] { "Id" };
             gAchievements.Actions.ShowAdd = !GetAttributeValue( AttributeKey.DetailPage ).IsNullOrWhiteSpace();
@@ -123,10 +116,16 @@ namespace RockWeb.Blocks.Streaks
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void gAchievements_Add( object sender, EventArgs e )
         {
-            NavigateToLinkedPage( AttributeKey.DetailPage, new Dictionary<string, string> {
-                { PageParamKey.AchievementTypeId, default(int).ToString() },
-                { PageParamKey.StreakTypeId, PageParameter( PageParamKey.StreakTypeId ) }
-            } );
+            var newParameters = new Dictionary<string, string>();
+            var currentParameters = QueryParameters();
+
+            foreach ( var kvp in currentParameters )
+            {
+                newParameters[kvp.Key] = kvp.Value.ToString();
+            }
+
+            newParameters[PageParamKey.AchievementTypeId] = default( int ).ToString();
+            NavigateToLinkedPage( AttributeKey.DetailPage, newParameters );
         }
 
         /// <summary>
@@ -188,18 +187,6 @@ namespace RockWeb.Blocks.Streaks
         {
             gAchievements.DataSource = GetGridViewModels();
             gAchievements.DataBind();
-
-            var streakTypeId = PageParameter( PageParamKey.StreakTypeId ).AsIntegerOrNull();
-
-            if ( streakTypeId.HasValue )
-            {
-                var streakTypeNameCol = gAchievements.ColumnsOfType<RockBoundField>().FirstOrDefault( rbf => rbf.DataField == "StreakTypeName" );
-
-                if ( streakTypeNameCol != null )
-                {
-                    streakTypeNameCol.Visible = false;
-                }
-            }
         }
 
         /// <summary>
@@ -208,12 +195,26 @@ namespace RockWeb.Blocks.Streaks
         /// <returns></returns>
         private List<AchievementTypeCache> GetAchievementTypes()
         {
-            var streakTypeId = PageParameter( PageParamKey.StreakTypeId ).AsIntegerOrNull();
-
-            return AchievementTypeCache.All()
-                .Where( stat => !streakTypeId.HasValue || stat.StreakTypeId == streakTypeId.Value )
+            var achievements = AchievementTypeCache.All()
                 .OrderBy( stat => stat.Id )
                 .ToList();
+
+            foreach ( string key in Request.QueryString.Keys )
+            {
+                if ( key.IsNullOrWhiteSpace() )
+                {
+                    continue;
+                }
+
+                var value = Request.QueryString[key];
+                achievements = achievements
+                    .Where( a =>
+                        a.SourceEntityQualifierColumn.Equals( key, StringComparison.OrdinalIgnoreCase ) &&
+                        a.SourceEntityQualifierValue.Equals( value, StringComparison.OrdinalIgnoreCase ) )
+                    .ToList();
+            }
+
+            return achievements;
         }
 
         /// <summary>
@@ -273,17 +274,6 @@ namespace RockWeb.Blocks.Streaks
             }
 
             return string.Empty;
-        }
-
-        /// <summary>
-        /// Gets the achievement types.
-        /// </summary>
-        /// <returns></returns>
-        private void SetTitlePrefix()
-        {
-            var streakTypeId = PageParameter( PageParamKey.StreakTypeId ).AsIntegerOrNull();
-            var streakTypeCache = StreakTypeCache.Get( streakTypeId ?? 0 );
-            lTitlePrefix.Text = streakTypeCache == null ? string.Empty : streakTypeCache.Name;
         }
 
         #endregion
