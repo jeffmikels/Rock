@@ -249,6 +249,18 @@ namespace Rock.Achievement
         /// <param name="achievementTypeCache">The achievement type cache.</param>
         /// <param name="rockContext">The rock context.</param>
         /// <returns></returns>
-        public abstract IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext );
+        public virtual IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
+        {
+            if ( !achievementTypeCache.SourceEntityTypeId.HasValue )
+            {
+                return null;
+            }
+
+            var entityTypeService = new EntityTypeService( rockContext );
+            return entityTypeService.GetEntitiesQuery(
+                achievementTypeCache.SourceEntityTypeId.Value,
+                achievementTypeCache.SourceEntityQualifierColumn,
+                achievementTypeCache.SourceEntityQualifierValue );
+        }
     }
 }

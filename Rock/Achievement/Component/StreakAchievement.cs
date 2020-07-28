@@ -208,7 +208,7 @@ namespace Rock.Achievement.Component
         {
             var rockContext = new RockContext();
             var streakTypeService = new StreakTypeService( rockContext );
-            var streakTypeCache = achievementTypeCache.StreakTypeCache;
+            var streakTypeCache = StreakTypeCache.Get( streak.StreakTypeId );
 
             // Validate the attribute values
             var numberToAchieve = GetAttributeValue( achievementTypeCache, AttributeKey.NumberToAchieve ).AsInteger();

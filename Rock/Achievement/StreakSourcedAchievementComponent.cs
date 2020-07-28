@@ -20,23 +20,6 @@ namespace Rock.Achievement
             new AchievementConfiguration( EntityTypeCache.Get<Streak>(), EntityTypeCache.Get<PersonAlias>() );
 
         /// <summary>
-        /// Gets the source entities query.
-        /// </summary>
-        /// <param name="achievementTypeCache">The achievement type cache.</param>
-        /// <param name="rockContext">The rock context.</param>
-        /// <returns></returns>
-        public override IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
-        {
-            if ( !achievementTypeCache.StreakTypeId.HasValue )
-            {
-                return Enumerable.Empty<Streak>().AsQueryable();
-            }
-
-            var service = new StreakService( rockContext );
-            return service.Queryable().Where( s => s.StreakTypeId == achievementTypeCache.StreakTypeId );
-        }
-
-        /// <summary>
         /// Processes the specified achievement type cache for the source entity.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>

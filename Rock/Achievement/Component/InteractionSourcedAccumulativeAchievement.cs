@@ -100,15 +100,7 @@ namespace Rock.Achievement.Component
         /// <returns></returns>
         public override IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
         {
-            var service = new InteractionService( rockContext );
-            var query = service.Queryable();
-
-            if ( achievementTypeCache.InteractionComponentId.HasValue )
-            {
-                query = query.Where( i => i.InteractionComponentId == achievementTypeCache.InteractionComponentId );
-            }
-
-            return query
+            return ( base.GetSourceEntitiesQuery( achievementTypeCache, rockContext ) as IQueryable<Interaction> )
                 .Where( i => i.PersonAliasId.HasValue )
                 .OrderByDescending( i => i.InteractionDateTime )
                 .GroupBy( i => i.PersonAliasId )

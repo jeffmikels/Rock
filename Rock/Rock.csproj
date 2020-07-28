@@ -339,7 +339,6 @@
     <Compile Include="Achievement\AchievementComponent.cs" />
     <Compile Include="Achievement\AchievementConfiguration.cs" />
     <Compile Include="Achievement\AchievementContainer.cs" />
-    <Compile Include="Achievement\Component\GroupMemberCount.cs" />
     <Compile Include="Achievement\Component\InteractionSourcedAccumulativeAchievement.cs" />
     <Compile Include="Achievement\Component\AccumulativeAchievement.cs" />
     <Compile Include="Achievement\Component\StreakAchievement.cs" />
