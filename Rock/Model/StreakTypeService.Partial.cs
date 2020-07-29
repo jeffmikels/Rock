@@ -62,27 +62,6 @@ namespace Rock.Model
 
         #endregion Constants
 
-        #region Overrides
-
-        /// <summary>
-        /// Deletes the specified item.
-        /// </summary>
-        /// <param name="item">The item.</param>
-        /// <returns></returns>
-        public override bool Delete( StreakType item )
-        {
-            // Since Entity Framework cannot cascade delete achievement attempts because of a possible circular reference,
-            // we need to delete them here
-            var attemptService = new AchievementAttemptService( Context as RockContext );
-            var attempts = attemptService.QueryByStreakTypeId( item.Id );
-            attemptService.DeleteRange( attempts );
-
-            // Now we can delete the streak type as normal
-            return base.Delete( item );
-        }
-
-        #endregion Overrides
-
         #region Methods
 
         /// <summary>

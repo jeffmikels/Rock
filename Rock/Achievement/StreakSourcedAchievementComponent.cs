@@ -54,8 +54,10 @@ namespace Rock.Achievement
             // Get all of the attempts for this streak and achievement combo, ordered by start date DESC so that
             // the most recent attempts can be found with FirstOrDefault
             var achievementAttemptService = new AchievementAttemptService( rockContext );
-            var attempts = achievementAttemptService.QueryByStreakId( streak.Id )
-                .Where( saa => saa.AchievementTypeId == achievementTypeCache.Id )
+            var attempts = achievementAttemptService.Queryable()
+                .Where( aa =>
+                    aa.AchievementTypeId == achievementTypeCache.Id &&
+                    aa.AchieverEntityId == streak.PersonAliasId )
                 .OrderByDescending( saa => saa.AchievementAttemptStartDateTime )
                 .ToList();
 

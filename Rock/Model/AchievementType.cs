@@ -52,6 +52,12 @@ namespace Rock.Model
         public string Description { get; set; }
 
         /// <summary>
+        /// Gets or sets the configuration from the <see cref="ComponentEntityTypeId"/>.
+        /// </summary>
+        [DataMember]
+        public string ComponentConfigJson { get; set; }
+
+        /// <summary>
         /// Gets or sets the source entity type. The source supplies the data framework from which achievements are computed.
         /// The original achievement sources were <see cref="Streak"/>s.
         /// </summary>
@@ -65,21 +71,6 @@ namespace Rock.Model
         [DataMember( IsRequired = true )]
         [Required]
         public int AchieverEntityTypeId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the source entity qualifier column that is used to narrow the scope of the possible sources set.
-        /// </summary>
-        [DataMember]
-        [MaxLength( 50 )]
-        public string SourceEntityQualifierColumn { get; set; }
-
-        /// <summary>
-        /// Gets or sets the source entity qualifier value that is used to narrow the scope of the possible sources set.
-        /// This was originally StreakTypeId.
-        /// </summary>
-        [DataMember]
-        [MaxLength( 200 )]
-        public string SourceEntityQualifierValue { get; set; }
 
         /// <summary>
         /// Gets or sets the Id of the achievement component <see cref="EntityType"/>

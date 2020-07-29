@@ -59,6 +59,13 @@ namespace Rock.Achievement.Component
         order: 3,
         key: AttributeKey.EndDateTime )]
 
+    [InteractionChannelInteractionComponentField(
+        name: "Interaction Channel and Component",
+        description: "The source interaction channel and component from which achievements are earned.",
+        required: false,
+        order: 4,
+        key: AttributeKey.InteractionChannelComponent )]
+
     public class InteractionSourcedAccumulativeAchievement : AchievementComponent
     {
         #region Keys
@@ -82,9 +89,24 @@ namespace Rock.Achievement.Component
             /// The End Date Time
             /// </summary>
             public const string EndDateTime = "EndDateTime";
+
+            /// <summary>
+            /// The channel and component
+            /// </summary>
+            public const string InteractionChannelComponent = "InteractionChannelComponent";
         }
 
         #endregion Keys
+
+        /// <summary>
+        /// Gets the attribute keys stored in configuration.
+        /// <see cref="AchievementType.ComponentConfigJson" />
+        /// </summary>
+        /// <value>
+        /// The attribute keys stored in configuration.
+        /// </value>
+        /// <exception cref="NotImplementedException"></exception>
+        public override HashSet<string> AttributeKeysStoredInConfig => new HashSet<string> { AttributeKey.InteractionChannelComponent };
 
         /// <summary>
         /// Gets the supported configuration.
@@ -93,18 +115,65 @@ namespace Rock.Achievement.Component
             new AchievementConfiguration( EntityTypeCache.Get<Interaction>(), EntityTypeCache.Get<PersonAlias>() );
 
         /// <summary>
-        /// Gets the source entities query.
+        /// Should the achievement type process attempts if the given source entity has been modified in some way.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="sourceEntity">The source entity.</param>
+        /// <returns></returns>
+        public override bool ShouldProcess( AchievementTypeCache achievementTypeCache, IEntity sourceEntity )
+        {
+            var interaction = sourceEntity as Interaction;
+
+            if ( interaction == null )
+            {
+                return false;
+            }
+
+            var channel = GetInteractionChannelCache( achievementTypeCache );
+
+            if ( channel == null )
+            {
+                return true;
+            }
+
+            var component = GetInteractionComponentCache( achievementTypeCache );
+
+            if ( component == null )
+            {
+                component = InteractionComponentCache.Get( interaction.InteractionComponentId );
+                return component.InteractionChannelId == channel.Id;
+            }
+
+            return interaction.InteractionComponentId == component.Id;
+        }
+
+        /// <summary>
+        /// Gets the source entities query. This is the set of source entities that should be passed to the process method
+        /// when processing this achievement type.
         /// </summary>
         /// <param name="achievementTypeCache">The achievement type cache.</param>
         /// <param name="rockContext">The rock context.</param>
         /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         public override IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
         {
-            return ( base.GetSourceEntitiesQuery( achievementTypeCache, rockContext ) as IQueryable<Interaction> )
-                .Where( i => i.PersonAliasId.HasValue )
-                .OrderByDescending( i => i.InteractionDateTime )
-                .GroupBy( i => i.PersonAliasId )
-                .Select( g => g.FirstOrDefault() );
+            var component = GetInteractionComponentCache( achievementTypeCache );
+            var service = new InteractionService( rockContext );
+            var query = service.Queryable();
+
+            if ( component != null )
+            {
+                return query.Where( i => i.InteractionComponentId == component.Id );
+            }
+
+            var channel = GetInteractionChannelCache( achievementTypeCache );
+
+            if ( channel != null )
+            {
+                return query.Where( i => i.InteractionComponent.InteractionChannelId == channel.Id );
+            }
+
+            return query;
         }
 
         /// <summary>
@@ -336,6 +405,52 @@ namespace Rock.Achievement.Component
         #region Helpers
 
         /// <summary>
+        /// Gets the interaction channel unique identifier.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        private Guid? GetInteractionChannelGuid( AchievementTypeCache achievementTypeCache )
+        {
+            var delimited = GetAttributeValue( achievementTypeCache, AttributeKey.InteractionChannelComponent );
+            var guids = delimited.SplitDelimitedValues().AsGuidOrNullList();
+            return guids.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Gets the interaction component unique identifier.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        private Guid? GetInteractionComponentGuid( AchievementTypeCache achievementTypeCache )
+        {
+            var delimited = GetAttributeValue( achievementTypeCache, AttributeKey.InteractionChannelComponent );
+            var guids = delimited.SplitDelimitedValues().AsGuidOrNullList();
+            return guids.Count == 2 ? guids[1] : null;
+        }
+
+        /// <summary>
+        /// Gets the interaction channel cache.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        private InteractionChannelCache GetInteractionChannelCache(AchievementTypeCache achievementTypeCache)
+        {
+            var guid = GetInteractionChannelGuid( achievementTypeCache );
+            return guid.HasValue ? InteractionChannelCache.Get( guid.Value ) : null;
+        }
+
+        /// <summary>
+        /// Gets the interaction component cache.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        private InteractionComponentCache GetInteractionComponentCache( AchievementTypeCache achievementTypeCache )
+        {
+            var guid = GetInteractionComponentGuid( achievementTypeCache );
+            return guid.HasValue ? InteractionComponentCache.Get( guid.Value ) : null;
+        }
+
+        /// <summary>
         /// Gets the interaction dates.
         /// </summary>
         /// <param name="achievementTypeCache">The achievementTypeCache.</param>
@@ -346,23 +461,16 @@ namespace Rock.Achievement.Component
         private List<DateTime> GetInteractionDates( AchievementTypeCache achievementTypeCache, int personAliasId, DateTime minDate, DateTime maxDate )
         {
             var rockContext = new RockContext();
-            var interactionService = new InteractionService( rockContext );
-            var sourceEntityQualifierValue = achievementTypeCache.SourceEntityQualifierValue.AsIntegerOrNull();
+            var query = GetSourceEntitiesQuery( achievementTypeCache, rockContext ) as IQueryable<Interaction>;
             var dayAfterMaxDate = maxDate.AddDays( 1 );
 
-            var query = interactionService.Queryable()
+            return query
                 .AsNoTracking()
                 .Where( i =>
                     i.PersonAliasId == personAliasId &&
                     i.InteractionDateTime >= minDate &&
-                    i.InteractionDateTime < dayAfterMaxDate );
-
-            if ( achievementTypeCache.SourceEntityQualifierColumn == nameof( Interaction.InteractionComponentId ) && sourceEntityQualifierValue.HasValue )
-            {
-                query = query.Where( i => i.InteractionComponentId == sourceEntityQualifierValue.Value );
-            }
-
-            return query.Select( i => i.InteractionDateTime )
+                    i.InteractionDateTime < dayAfterMaxDate )
+                .Select( i => i.InteractionDateTime )
                 .ToList()
                 .OrderBy( d => d )
                 .ToList();

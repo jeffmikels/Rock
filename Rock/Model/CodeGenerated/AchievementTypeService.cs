@@ -111,7 +111,7 @@ namespace Rock.Model
             target.MaxAccomplishmentsAllowed = source.MaxAccomplishmentsAllowed;
             target.Name = source.Name;
             target.ResultsLavaTemplate = source.ResultsLavaTemplate;
-            target.SourceEntityQualifierValue = source.SourceEntityQualifierValue;
+            target.ComponentConfigJson = source.ComponentConfigJson;
             target.CreatedDateTime = source.CreatedDateTime;
             target.ModifiedDateTime = source.ModifiedDateTime;
             target.CreatedByPersonAliasId = source.CreatedByPersonAliasId;

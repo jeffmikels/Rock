@@ -34,6 +34,15 @@ namespace Rock.Achievement
         public abstract AchievementConfiguration SupportedConfiguration { get; }
 
         /// <summary>
+        /// Gets the attribute keys stored in configuration.
+        /// <see cref="AchievementType.ComponentConfigJson"/>
+        /// </summary>
+        /// <value>
+        /// The attribute keys stored in configuration.
+        /// </value>
+        public abstract HashSet<string> AttributeKeysStoredInConfig { get; }
+
+        /// <summary>
         /// Gets the attribute value defaults.
         /// </summary>
         /// <value>
@@ -115,8 +124,33 @@ namespace Rock.Achievement
                 throw new ArgumentNullException( nameof( achievementTypeCache ) );
             }
 
+            if ( AttributeKeysStoredInConfig.Contains( key ) )
+            {
+                return achievementTypeCache.GetComponentConfigValue( key );
+            }
+
             return achievementTypeCache.GetAttributeValue( key );
         }
+
+        /// <summary>
+        /// Convert attribute values to a dictionary configuration. This will be serialized and stored on the model.
+        /// <see cref="AchievementType.ComponentConfigJson" />
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        public virtual Dictionary<string, string> GenerateConfigFromAttributeValues( AchievementTypeCache achievementTypeCache )
+        {
+            var dictionary = new Dictionary<string, string>();
+
+            foreach ( var key in AttributeKeysStoredInConfig )
+            {
+                dictionary[key] = achievementTypeCache.GetAttributeValue( key );
+            }
+
+            return dictionary;
+        }
+
+        #region Attempt Calculation Helpers
 
         /// <summary>
         /// Copies the source attempt properties to the target.
@@ -233,6 +267,10 @@ namespace Rock.Achievement
             return targetCount - attemptCount;
         }
 
+        #endregion Attempt Calculation Helpers
+
+        #region Abstract Methods
+
         /// <summary>
         /// Processes the specified achievement type cache for the source entity.
         /// </summary>
@@ -243,24 +281,22 @@ namespace Rock.Achievement
         public abstract HashSet<AchievementAttempt> Process( RockContext rockContext, AchievementTypeCache achievementTypeCache, IEntity sourceEntity );
 
         /// <summary>
+        /// Should the achievement type process attempts if the given source entity has been modified in some way.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="sourceEntity">The source entity.</param>
+        /// <returns></returns>
+        public abstract bool ShouldProcess( AchievementTypeCache achievementTypeCache, IEntity sourceEntity );
+
+        /// <summary>
         /// Gets the source entities query. This is the set of source entities that should be passed to the process method
         /// when processing this achievement type.
         /// </summary>
         /// <param name="achievementTypeCache">The achievement type cache.</param>
         /// <param name="rockContext">The rock context.</param>
         /// <returns></returns>
-        public virtual IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
-        {
-            if ( !achievementTypeCache.SourceEntityTypeId.HasValue )
-            {
-                return null;
-            }
+        public abstract IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext );
 
-            var entityTypeService = new EntityTypeService( rockContext );
-            return entityTypeService.GetEntitiesQuery(
-                achievementTypeCache.SourceEntityTypeId.Value,
-                achievementTypeCache.SourceEntityQualifierColumn,
-                achievementTypeCache.SourceEntityQualifierValue );
-        }
+        #endregion Abstract Methods
     }
 }

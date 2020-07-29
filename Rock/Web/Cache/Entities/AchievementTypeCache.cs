@@ -65,17 +65,10 @@ namespace Rock.Web.Cache
         public int? SourceEntityTypeId { get; private set; }
 
         /// <summary>
-        /// Gets the source entity qualifier column.
+        /// Gets the component config JSON.
         /// </summary>
         [DataMember]
-        public string SourceEntityQualifierColumn { get; private set; }
-
-        /// <summary>
-        /// Gets or sets the source entity qualifier value.
-        /// This was originally StreakTypeId.
-        /// </summary>
-        [DataMember]
-        public string SourceEntityQualifierValue { get; private set; }
+        public string ComponentConfigJson { get; private set; }
 
         /// <summary>
         /// Gets or sets the Id of the component <see cref="EntityType"/>
@@ -198,54 +191,6 @@ namespace Rock.Web.Cache
         }
 
         /// <summary>
-        /// Gets a value indicating whether this instance is streak sourced.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if this instance is streak sourced; otherwise, <c>false</c>.
-        /// </value>
-        public bool IsSourcedByStreaks
-        {
-            get => EntityTypeCache.Get<Streak>().Id == SourceEntityTypeId;
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether this instance is sourced by interactions.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if this instance is sourced by interactions; otherwise, <c>false</c>.
-        /// </value>
-        public bool IsSourcedByInteractions
-        {
-            get => EntityTypeCache.Get<Interaction>().Id == SourceEntityTypeId;
-        }
-
-        /// <summary>
-        /// Gets the streak type identifier.
-        /// </summary>
-        /// <value>
-        /// The streak type identifier.
-        /// </value>
-        public int? StreakTypeId
-        {
-            get => ( IsSourcedByStreaks && SourceEntityQualifierColumn == nameof( Streak.StreakTypeId ) ) ?
-                SourceEntityQualifierValue.AsIntegerOrNull() :
-                null;
-        }
-
-        /// <summary>
-        /// Gets the interaction component identifier.
-        /// </summary>
-        /// <value>
-        /// The interaction component identifier.
-        /// </value>
-        public int? InteractionComponentId
-        {
-            get => ( IsSourcedByInteractions && SourceEntityQualifierColumn == nameof( Interaction.InteractionComponentId ) ) ?
-                SourceEntityQualifierValue.AsIntegerOrNull() :
-                null;
-        }
-
-        /// <summary>
         /// Gets the source entity type cache.
         /// </summary>
         /// <value>
@@ -293,25 +238,6 @@ namespace Rock.Web.Cache
         }
 
         /// <summary>
-        /// Gets the Streak Type Cache.
-        /// </summary>
-        public StreakTypeCache StreakTypeCache
-        {
-            get => StreakTypeId.HasValue ? StreakTypeCache.Get( StreakTypeId.Value ) : null;
-        }
-
-        /// <summary>
-        /// Gets the interaction component cache.
-        /// </summary>
-        /// <value>
-        /// The interaction component cache.
-        /// </value>
-        public InteractionComponentCache InteractionComponentCache
-        {
-            get => InteractionComponentId.HasValue ? InteractionComponentCache.Get( InteractionComponentId.Value ) : null;
-        }
-
-        /// <summary>
         /// Gets the achievement component.
         /// </summary>
         /// <value>
@@ -345,6 +271,26 @@ namespace Rock.Web.Cache
         #region Public Methods
 
         /// <summary>
+        /// Gets the component configuration.
+        /// </summary>
+        /// <value>
+        /// The component configuration.
+        /// </value>
+        public Dictionary<string, string> ComponentConfig =>
+            ComponentConfigJson.FromJsonOrNull<Dictionary<string, string>>() ??
+                new Dictionary<string, string>();
+
+        /// <summary>
+        /// Gets the component configuration value.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public string GetComponentConfigValue(string key)
+        {
+            return ComponentConfig.GetValueOrNull( key );
+        }
+
+        /// <summary>
         /// Set's the cached objects properties from the model/entities properties.
         /// </summary>
         /// <param name="entity"></param>
@@ -363,8 +309,7 @@ namespace Rock.Web.Cache
             IsActive = achievementType.IsActive;
             AchieverEntityTypeId = achievementType.AchieverEntityTypeId;
             SourceEntityTypeId = achievementType.SourceEntityTypeId;
-            SourceEntityQualifierColumn = achievementType.SourceEntityQualifierColumn;
-            SourceEntityQualifierValue = achievementType.SourceEntityQualifierValue;
+            ComponentConfigJson = achievementType.ComponentConfigJson;
             ComponentEntityTypeId = achievementType.ComponentEntityTypeId;
             AchievementStartWorkflowTypeId = achievementType.AchievementStartWorkflowTypeId;
             AchievementFailureWorkflowTypeId = achievementType.AchievementFailureWorkflowTypeId;
@@ -399,30 +344,13 @@ namespace Rock.Web.Cache
                 return new List<AchievementTypeCache>();
             }
 
-            var type = sourceEntity.GetType();
-            var propertyValue = new Dictionary<string, object>();
-
             return All()
                 .Where( at =>
                     at.SourceEntityTypeId == sourceEntityTypeCache.Id &&
                     at.IsActive )
                 .Where( at => {
-                    if ( at.SourceEntityQualifierColumn.IsNullOrWhiteSpace() )
-                    {
-                        return true;
-                    }
-
-                    var fieldName = at.SourceEntityQualifierColumn.Trim();
-                    var entityValue = propertyValue.GetValueOrNull( fieldName );
-
-                    if ( entityValue == null )
-                    {
-                        var property = type.GetProperty( fieldName );
-                        entityValue = property.GetValue( sourceEntity );
-                        propertyValue[fieldName] = entityValue;
-                    }
-
-                    return at.SourceEntityQualifierValue == entityValue.ToString();
+                    var component = at.AchievementComponent;
+                    return component.ShouldProcess( at, sourceEntity );
                 } )
                 .ToList();
         }

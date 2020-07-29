@@ -222,6 +222,11 @@ namespace Rock.Model
                 return entityQry;
             }
 
+            if ( qualifierColumn.EndsWith( "Id", StringComparison.OrdinalIgnoreCase ) )
+            {
+                return entityQry.Where( $"{qualifierColumn} = @0", qualifierValue.AsInteger() );
+            }
+
             return entityQry.Where( $"{qualifierColumn} = @0", qualifierValue );
         }
 

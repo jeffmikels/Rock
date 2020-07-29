@@ -107,7 +107,7 @@ namespace Rock.Tests.Integration.RockTests.Model
             {
                 Name = "Test Achievement",
                 IsActive = true,
-                SourceEntityQualifierValue = _streakTypeId.ToString(),
+                // SourceEntityQualifierValue = _streakTypeId.ToString(),
                 ComponentEntityTypeId = EntityTypeCache.GetId( ComponentEntityTypeName ) ?? 0,
                 MaxAccomplishmentsAllowed = 2,
                 AllowOverAchievement = false

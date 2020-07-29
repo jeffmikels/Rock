@@ -30,31 +30,6 @@ namespace Rock.Model
     public partial class StreakService
     {
         /// <summary>
-        /// Queries streaks by achievement attempt identifier.
-        /// </summary>
-        /// <param name="achievementAttemptId">The achievement attempt identifier.</param>
-        /// <returns></returns>
-        public IQueryable<Streak> QueryByAchievementAttemptId( int achievementAttemptId )
-        {
-            var rockContext = Context as RockContext;
-            var achievementAttemptService = new AchievementAttemptService( rockContext );
-            var streakEntityTypeId = EntityTypeCache.Get<Streak>().Id;
-            var personAliasEntityTypeId = EntityTypeCache.Get<PersonAlias>().Id;
-
-            var attemptQuery = achievementAttemptService.Queryable()
-                .AsNoTracking()
-                .Where( aa =>
-                    aa.AchievementType.SourceEntityTypeId == streakEntityTypeId &&
-                    aa.AchievementType.AchieverEntityTypeId == personAliasEntityTypeId &&
-                    aa.AchievementType.SourceEntityQualifierColumn == nameof( Streak.StreakTypeId ) &&
-                    aa.Id == achievementAttemptId );
-
-            return Queryable().Where( s =>
-                attemptQuery.Select( aa => aa.AchieverEntityId ).Contains( s.PersonAliasId ) &&
-                attemptQuery.Select( aa => aa.AchievementType.SourceEntityQualifierValue ).Contains( s.StreakTypeId.ToString() ) );
-        }
-
-        /// <summary>
         /// Get the person's streaks in the streak type
         /// </summary>
         /// <param name="streakTypeId"></param>

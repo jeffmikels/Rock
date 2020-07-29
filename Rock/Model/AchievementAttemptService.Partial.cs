@@ -27,56 +27,6 @@ namespace Rock.Model
     public partial class AchievementAttemptService
     {
         /// <summary>
-        /// Queries attempts by streak type identifier.
-        /// </summary>
-        /// <param name="streakTypeId">The streak type identifier.</param>
-        /// <returns></returns>
-        public IQueryable<AchievementAttempt> QueryByStreakTypeId( int streakTypeId )
-        {
-            var streakEntityTypeId = EntityTypeCache.Get<Streak>().Id;
-
-            return Queryable().Where( aa =>
-                aa.AchievementType.SourceEntityTypeId == streakEntityTypeId &&
-                aa.AchievementType.SourceEntityQualifierColumn == nameof( Streak.StreakTypeId ) &&
-                aa.AchievementType.SourceEntityQualifierValue == streakTypeId.ToString()
-            );
-        }
-
-        /// <summary>
-        /// Queries attempts by streak identifier.
-        /// </summary>
-        /// <param name="streakId">The streak identifier.</param>
-        /// <returns></returns>
-        public IQueryable<AchievementAttempt> QueryByStreakId( int streakId )
-        {
-            var rockContext = Context as RockContext;
-            var streakService = new StreakService( rockContext );
-            var streakQuery = streakService.Queryable()
-                .AsNoTracking()
-                .Where( s => s.Id == streakId );
-
-            var streakEntityTypeId = EntityTypeCache.Get<Streak>().Id;
-            var personEntityTypeId = EntityTypeCache.Get<Person>().Id;
-            var personAliasEntityTypeId = EntityTypeCache.Get<PersonAlias>().Id;
-
-            return Queryable().Where( aa =>
-                aa.AchievementType.SourceEntityTypeId == streakEntityTypeId &&
-                aa.AchievementType.SourceEntityQualifierColumn == nameof( Streak.StreakTypeId ) &&
-                streakQuery.Select( s => s.StreakTypeId.ToString() ).Contains( aa.AchievementType.SourceEntityQualifierValue ) &&
-                (
-                    (
-                        aa.AchievementType.AchieverEntityTypeId == personEntityTypeId &&
-                        streakQuery.Select( s => s.PersonAlias.PersonId ).Contains( aa.AchieverEntityId )
-                    ) ||
-                    (
-                        aa.AchievementType.AchieverEntityTypeId == personAliasEntityTypeId &&
-                        streakQuery.Select( s => s.PersonAliasId ).Contains( aa.AchieverEntityId )
-                    )
-                )
-            );
-        }
-
-        /// <summary>
         /// Queries attempts by person identifier.
         /// </summary>
         /// <param name="personId">The person identifier.</param>
