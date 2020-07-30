@@ -169,28 +169,6 @@ namespace Rock.Web.Cache
         #region Related Entity Helpers
 
         /// <summary>
-        /// Gets a value indicating whether this instance is achieved by person alias.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if this instance is achieved by person alias; otherwise, <c>false</c>.
-        /// </value>
-        public bool IsAchievedByPersonAlias
-        {
-            get => EntityTypeCache.Get<PersonAlias>().Id == AchieverEntityTypeId;
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether this instance is achieved by person.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if this instance is achieved by person; otherwise, <c>false</c>.
-        /// </value>
-        public bool IsAchievedByPerson
-        {
-            get => EntityTypeCache.Get<Person>().Id == AchieverEntityTypeId;
-        }
-
-        /// <summary>
         /// Gets the source entity type cache.
         /// </summary>
         /// <value>

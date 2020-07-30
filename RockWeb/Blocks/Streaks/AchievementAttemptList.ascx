@@ -34,8 +34,7 @@
                             <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue" OnClearFilterClick="rFilter_ClearFilterClick" FieldLayout="Custom">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
-                                        <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
+                                        <Rock:RockTextBox ID="tbAchieverName" runat="server" Label="Achiever Name" />
                                         <Rock:AchievementTypePicker ID="statPicker" runat="server" Label="Achievement Type" />
                                     </div>
                                     <div class="col-md-6">

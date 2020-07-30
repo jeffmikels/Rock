@@ -889,12 +889,22 @@ namespace RockWeb.Blocks.Streaks
 
                 if ( streakId.HasValue && streakId.Value > 0 )
                 {
+                    var streakEntityTypeId = EntityTypeCache.Get<Streak>().Id;
+                    var achievementTypeIds = AchievementTypeCache.All()
+                        .Where( at =>
+                             at.IsActive &&
+                             at.SourceEntityTypeId == streakEntityTypeId )
+                        .Select( at => at.Id );
+
                     var rockContext = GetRockContext();
                     var achievementAttemptService = new AchievementAttemptService( rockContext );
 
-                    _successfulAttempts = achievementAttemptService.QueryByStreakId( streakId.Value )
+                    _successfulAttempts = achievementAttemptService.Queryable()
                         .AsNoTracking()
-                        .Count( saa => saa.IsSuccessful );
+                        .Count( aa =>
+                            aa.IsSuccessful &&
+                            achievementTypeIds.Contains( aa.AchievementTypeId ) &&
+                            aa.AchieverEntityId == streakId.Value );
                 }
             }
 

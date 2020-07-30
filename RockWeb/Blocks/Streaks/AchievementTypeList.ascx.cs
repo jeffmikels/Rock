@@ -195,9 +195,12 @@ namespace RockWeb.Blocks.Streaks
         /// <returns></returns>
         private List<AchievementTypeCache> GetAchievementTypes()
         {
-            var achievements = AchievementTypeCache.All()
-                .OrderBy( stat => stat.Id )
-                .ToList();
+            if ( _achievementTypes != null )
+            {
+                return _achievementTypes;
+            }
+
+            var filters = new List<KeyValuePair<string, string>>();
 
             foreach ( string key in Request.QueryString.Keys )
             {
@@ -207,15 +210,25 @@ namespace RockWeb.Blocks.Streaks
                 }
 
                 var value = Request.QueryString[key];
-                achievements = achievements
-                    .Where( a =>
-                        a.SourceEntityQualifierColumn.Equals( key, StringComparison.OrdinalIgnoreCase ) &&
-                        a.SourceEntityQualifierValue.Equals( value, StringComparison.OrdinalIgnoreCase ) )
-                    .ToList();
+                filters.Add( new KeyValuePair<string, string>( key, value ) );
             }
 
-            return achievements;
+            _achievementTypes = AchievementTypeCache.All()
+            .Where( at => {
+                if ( !filters.Any() )
+                {
+                    return true;
+                }
+
+                var component = at.AchievementComponent;
+                return component != null && component.IsRelevantToAllFilters( at, filters );
+            } )
+            .OrderBy( at => at.Id )
+            .ToList();
+
+            return _achievementTypes;
         }
+        private List<AchievementTypeCache> _achievementTypes = null;
 
         /// <summary>
         /// Gets the grid view models.
@@ -252,25 +265,11 @@ namespace RockWeb.Blocks.Streaks
         /// <returns></returns>
         private string GetSourceName( AchievementTypeCache achievementTypeCache )
         {
-            var interactionComponentCache = achievementTypeCache.InteractionComponentCache;
+            var component = achievementTypeCache.AchievementComponent;
 
-            if ( interactionComponentCache != null )
+            if ( component != null )
             {
-                return interactionComponentCache.Name;
-            }
-
-            var streakTypeCache = achievementTypeCache.StreakTypeCache;
-
-            if ( streakTypeCache != null )
-            {
-                return streakTypeCache.Name;
-            }
-
-            var sourceEntityTypeCache = achievementTypeCache.SourceEntityTypeCache;
-
-            if ( sourceEntityTypeCache != null )
-            {
-                return string.Format( "Any {0}", sourceEntityTypeCache.FriendlyName );
+                return component.GetSourceName( achievementTypeCache );
             }
 
             return string.Empty;

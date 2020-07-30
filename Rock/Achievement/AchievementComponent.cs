@@ -272,6 +272,13 @@ namespace Rock.Achievement
         #region Abstract Methods
 
         /// <summary>
+        /// Gets the name of the source that these achievements are measured from.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        public abstract string GetSourceName( AchievementTypeCache achievementTypeCache );
+
+        /// <summary>
         /// Processes the specified achievement type cache for the source entity.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
@@ -296,6 +303,27 @@ namespace Rock.Achievement
         /// <param name="rockContext">The rock context.</param>
         /// <returns></returns>
         public abstract IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext );
+
+        /// <summary>
+        /// Gets the achiever attempt query. This is the query (not enumerated) that joins attempts of this achievement type with the
+        /// achiever entities, as well as the name (<see cref="AchieverAttemptItem.AchieverName"/> that could represent the achiever
+        /// in a grid or other such display.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <returns></returns>
+        public abstract IQueryable<AchieverAttemptItem> GetAchieverAttemptQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext );
+
+        /// <summary>
+        /// Determines whether this achievement type applies given the set of filters. The filters could be the query string
+        /// of a web request.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="filters">The filters.</param>
+        /// <returns>
+        ///   <c>true</c> if [is relevant to all filters] [the specified filters]; otherwise, <c>false</c>.
+        /// </returns>
+        public abstract bool IsRelevantToAllFilters( AchievementTypeCache achievementTypeCache, List<KeyValuePair<string, string>> filters );
 
         #endregion Abstract Methods
     }

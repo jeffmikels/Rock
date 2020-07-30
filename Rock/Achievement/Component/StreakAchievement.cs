@@ -105,58 +105,14 @@ namespace Rock.Achievement.Component
             public const string StreakType = "StreakType";
         }
 
+        /// <summary>
+        /// Gets the streak type attribute key.
+        /// </summary>
+        protected override string StreakTypeAttributeKey => AttributeKey.StreakType;
+
         #endregion Keys
 
         #region Abstract Method Overrides
-
-        /// <summary>
-        /// Gets the attribute keys stored in configuration.
-        /// <see cref="AchievementType.ComponentConfigJson" />
-        /// </summary>
-        /// <value>
-        /// The attribute keys stored in configuration.
-        /// </value>
-        /// <exception cref="NotImplementedException"></exception>
-        public override HashSet<string> AttributeKeysStoredInConfig => new HashSet<string> { AttributeKey.StreakType };
-
-        /// <summary>
-        /// Should the achievement type process attempts if the given source entity has been modified in some way.
-        /// </summary>
-        /// <param name="achievementTypeCache">The achievement type cache.</param>
-        /// <param name="sourceEntity">The source entity.</param>
-        /// <returns></returns>
-        public override bool ShouldProcess( AchievementTypeCache achievementTypeCache, IEntity sourceEntity )
-        {
-            var streak = sourceEntity as Streak;
-
-            if ( streak == null )
-            {
-                return false;
-            }
-
-            return streak.StreakTypeId == GetStreakTypeCache( achievementTypeCache )?.Id;
-        }
-
-        /// <summary>
-        /// Gets the source entities query. This is the set of source entities that should be passed to the process method
-        /// when processing this achievement type.
-        /// </summary>
-        /// <param name="achievementTypeCache">The achievement type cache.</param>
-        /// <param name="rockContext">The rock context.</param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public override IQueryable<IEntity> GetSourceEntitiesQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
-        {
-            var streakTypeCache = GetStreakTypeCache( achievementTypeCache );
-
-            if ( streakTypeCache == null )
-            {
-                return Enumerable.Empty<Streak>().AsQueryable();
-            }
-
-            var service = new StreakService( rockContext );
-            return service.Queryable().Where( s => s.StreakTypeId == streakTypeCache.Id );
-        }
 
         /// <summary>
         /// Update the open attempt record if there are changes.
@@ -401,27 +357,6 @@ namespace Rock.Achievement.Component
         #endregion Abstract Method Overrides
 
         #region Helpers
-
-        /// <summary>
-        /// Gets the streak type unique identifier.
-        /// </summary>
-        /// <param name="achievementTypeCache">The achievement type cache.</param>
-        /// <returns></returns>
-        private Guid? GetStreakTypeGuid( AchievementTypeCache achievementTypeCache )
-        {
-            return achievementTypeCache.GetComponentConfigValue( AttributeKey.StreakType ).AsGuidOrNull();
-        }
-
-        /// <summary>
-        /// Gets the streak type cache.
-        /// </summary>
-        /// <param name="achievementTypeCache">The achievement type cache.</param>
-        /// <returns></returns>
-        private StreakTypeCache GetStreakTypeCache( AchievementTypeCache achievementTypeCache )
-        {
-            var streakTypeGuid = GetStreakTypeGuid( achievementTypeCache );
-            return streakTypeGuid.HasValue ? StreakTypeCache.Get( streakTypeGuid.Value ) : null;
-        }
 
         /// <summary>
         /// Gets the attempt from the streak.

@@ -94,44 +94,19 @@
                         </div>
                     </div>
 
-                    <hr />
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <Rock:ComponentPicker ID="cpAchievementComponent" runat="server" Label="Achievement Component" Required="true" ContainerType="Rock.Achievement.AchievementContainer" AutoPostBack="true" OnSelectedIndexChanged="cpAchievementComponent_SelectedIndexChanged" Help="The achievement type allows different methods for calculating a successful achievement." />
+                    <div class="well">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <Rock:ComponentPicker ID="cpAchievementComponent" runat="server" Label="Achievement Component" Required="true" ContainerType="Rock.Achievement.AchievementContainer" AutoPostBack="true" OnSelectedIndexChanged="cpAchievementComponent_SelectedIndexChanged" Help="The achievement type allows different methods for calculating a successful achievement." />
+                            </div>
+                            <div class="col-md-6">
+                                <p class="panel-body">
+                                    <asp:Literal ID="lComponentDescription" runat="server" />
+                                </p>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <p class="panel-body">
-                                <asp:Literal ID="lComponentDescription" runat="server" />
-                            </p>
-                        </div>
+                        <Rock:AttributeValuesContainer ID="avcComponentAttributes" runat="server" NumberOfColumns="2" />
                     </div>
-
-                    <Rock:AttributeValuesContainer ID="avcComponentAttributes" runat="server" NumberOfColumns="2" />
-
-                    <hr />
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p>
-                                <label>Source Entity</label>
-                                <br />
-                                <asp:Literal ID="lSourceEntityTypeName" runat="server" />
-                            </p>
-                            <p><asp:Literal ID="Literal1" runat="server" /></p>
-                            <Rock:RockTextBox ID="tbSourceQualifierField" runat="server" Label="Source Qualifier Field" />
-                            <Rock:RockTextBox ID="tbSourceQualifierValue" runat="server" Label="Source Qualifier Value" />
-                        </div>
-                        <div class="col-md-6">
-                            <p>
-                                <label>Achiever Entity</label>
-                                <br />
-                                <asp:Literal ID="lAchieverEntityTypeName" runat="server" />
-                            </p>
-                        </div>
-                    </div>
-
-                    <hr />
 
                     <Rock:PanelWidget ID="pwStep" runat="server" Title="Step Configuration">
                         <div class="row">

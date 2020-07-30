@@ -202,35 +202,6 @@ namespace Rock.Model
         }
 
         /// <summary>
-        /// Gets an Entity query by type and optionally qualifier column and value
-        /// </summary>
-        /// <param name="entityTypeId">The entity type identifier.</param>
-        /// <param name="qualifierColumn">The qualifier column.</param>
-        /// <param name="qualifierValue">The qualifier value.</param>
-        /// <returns></returns>
-        public IQueryable<IEntity> GetEntitiesQuery( int entityTypeId, string qualifierColumn = "", string qualifierValue = "" )
-        {
-            var entityQry = GetQueryable( entityTypeId );
-
-            if ( entityQry == null )
-            {
-                return null;
-            }
-
-            if ( qualifierColumn.IsNullOrWhiteSpace() )
-            {
-                return entityQry;
-            }
-
-            if ( qualifierColumn.EndsWith( "Id", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return entityQry.Where( $"{qualifierColumn} = @0", qualifierValue.AsInteger() );
-            }
-
-            return entityQry.Where( $"{qualifierColumn} = @0", qualifierValue );
-        }
-
-        /// <summary>
         /// Gets an Entity by type and entity Guid.
         /// </summary>
         /// <param name="entityTypeId">The entity type identifier.</param>

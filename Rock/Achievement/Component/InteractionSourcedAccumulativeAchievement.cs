@@ -177,6 +177,71 @@ namespace Rock.Achievement.Component
         }
 
         /// <summary>
+        /// Determines whether this achievement type applies given the set of filters. The filters could be the query string
+        /// of a web request.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="filters">The filters.</param>
+        /// <returns>
+        ///   <c>true</c> if [is relevant to all filters] [the specified filters]; otherwise, <c>false</c>.
+        /// </returns>
+        public override bool IsRelevantToAllFilters( AchievementTypeCache achievementTypeCache, List<KeyValuePair<string, string>> filters )
+        {
+            if ( filters.Count == 0 )
+            {
+                return true;
+            }
+
+            if ( filters.Count > 2 )
+            {
+                return false;
+            }
+
+            return filters.All( f =>
+            {
+                if ( f.Key.Equals( "InteractionChannelId", StringComparison.OrdinalIgnoreCase ) )
+                {
+                    return f.Value.AsInteger() == GetInteractionChannelCache( achievementTypeCache )?.Id;
+                }
+
+                if ( f.Key.Equals( "InteractionComponentId", StringComparison.OrdinalIgnoreCase ) )
+                {
+                    return f.Value.AsInteger() == GetInteractionComponentCache( achievementTypeCache )?.Id;
+                }
+
+                return false;
+            } );
+        }
+
+        /// <summary>
+        /// Gets the achiever attempt query. This is the query (not enumerated) that joins attempts of this achievement type with the
+        /// achiever entities, as well as the name (<see cref="AchieverAttemptItem.AchieverName"/> that could represent the achiever
+        /// in a grid or other such display.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <returns></returns>
+        public override IQueryable<AchieverAttemptItem> GetAchieverAttemptQuery( AchievementTypeCache achievementTypeCache, RockContext rockContext )
+        {
+            var attemptService = new AchievementAttemptService( rockContext );
+            var personAliasService = new PersonAliasService( rockContext );
+
+            var attemptQuery = attemptService.Queryable().Where( aa => aa.AchievementTypeId == achievementTypeCache.Id );
+            var personAliasQuery = personAliasService.Queryable();
+
+            return attemptQuery.Join(
+                    personAliasQuery,
+                    aa => aa.AchieverEntityId,
+                    pa => pa.Id,
+                    ( aa, pa ) => new AchieverAttemptItem
+                    {
+                        AchievementAttempt = aa,
+                        Achiever = pa,
+                        AchieverName = $"{pa.Person.NickName} {pa.Person.LastName}"
+                    } );
+        }
+
+        /// <summary>
         /// Processes the specified achievement type cache for the source entity.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
@@ -302,6 +367,34 @@ namespace Rock.Achievement.Component
             }
 
             return updatedAttempts;
+        }
+
+        /// <summary>
+        /// Gets the name of the source that these achievements are measured from.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <returns></returns>
+        public override string GetSourceName( AchievementTypeCache achievementTypeCache )
+        {
+            var channel = GetInteractionChannelCache( achievementTypeCache );
+            var component = GetInteractionComponentCache( achievementTypeCache );
+
+            if ( channel == null && component == null )
+            {
+                return "Any Interaction";
+            }
+
+            if ( component == null )
+            {
+                return channel.Name;
+            }
+
+            if ( channel == null )
+            {
+                return component.Name;
+            }
+
+            return $"{channel.Name}: {component.Name}";
         }
 
         /// <summary>

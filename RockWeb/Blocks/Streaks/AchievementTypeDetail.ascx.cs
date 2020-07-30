@@ -245,7 +245,6 @@ namespace RockWeb.Blocks.Streaks
         protected void cpAchievementComponent_SelectedIndexChanged( object sender, EventArgs e )
         {
             RenderComponentAttributeControls();
-            SyncComponentConfig();
             SyncPrerequisiteList();
         }
 
@@ -470,25 +469,6 @@ namespace RockWeb.Blocks.Streaks
         /// <summary>
         /// Synchronizes the step controls.
         /// </summary>
-        private void SyncComponentConfig()
-        {
-            var config = GetAchievementConfiguration();
-
-            if ( config != null )
-            {
-                lAchieverEntityTypeName.Text = config.AchieverEntityTypeCache.FriendlyName;
-                lSourceEntityTypeName.Text = config.SourceEntityTypeCache.FriendlyName;
-            }
-            else
-            {
-                lAchieverEntityTypeName.Text = string.Empty;
-                lSourceEntityTypeName.Text = string.Empty;
-            }
-        }
-
-        /// <summary>
-        /// Synchronizes the step controls.
-        /// </summary>
         private void SyncStepControls()
         {
             var stepProgramId = spstStepType.StepProgramId;
@@ -561,10 +541,7 @@ namespace RockWeb.Blocks.Streaks
             {
                 achievementType = new AchievementType();
                 achievementTypeService.Add( achievementType );
-
                 achievementType.ComponentEntityTypeId = cpAchievementComponent.SelectedEntityTypeId ?? 0;
-                achievementType.SourceEntityQualifierColumn = tbSourceQualifierField.Text;
-                achievementType.SourceEntityQualifierValue = tbSourceQualifierValue.Text;
 
                 var configuration = GetAchievementConfiguration();
 
@@ -686,6 +663,12 @@ namespace RockWeb.Blocks.Streaks
             avcComponentAttributes.GetEditValues( achievementType );
             achievementType.SaveAttributeValues( rockContext );
 
+            // Now that the component attributes are saved, generate the config JSON from the component
+            var updatedCacheItem = AchievementTypeCache.Get( achievementType.Id );
+            var component = updatedCacheItem.AchievementComponent;
+            var configDictionary = component.GenerateConfigFromAttributeValues( updatedCacheItem );
+            achievementType.ComponentConfigJson = configDictionary.ToJson();
+
             // If the save was successful, reload the page using the new record Id.
             NavigateToPage( RockPage.Guid, new Dictionary<string, string> {
                 { PageParameterKey.AchievementTypeId, achievementType.Id.ToString() }
@@ -774,15 +757,6 @@ namespace RockWeb.Blocks.Streaks
             SyncOverAchievementAndMaxControls();
             RenderComponentAttributeControls();
             SyncPrerequisiteList();
-
-            // Source entity controls
-            SyncComponentConfig();
-
-            tbSourceQualifierField.Enabled = false;
-            tbSourceQualifierField.Text = achievementType.SourceEntityQualifierColumn;
-
-            tbSourceQualifierValue.Enabled = false;
-            tbSourceQualifierValue.Text = achievementType.SourceEntityQualifierValue;
         }
 
         /// <summary>
@@ -809,17 +783,6 @@ namespace RockWeb.Blocks.Streaks
             SyncOverAchievementAndMaxControls();
             RenderComponentAttributeControls();
             SyncPrerequisiteList();
-
-            // Source entity controls
-            SyncComponentConfig();
-            var streakTypeCache = GetStreakTypeCache();
-
-            if ( streakTypeCache != null )
-            {
-                var streakEntityType = EntityTypeCache.Get<Streak>();
-                tbSourceQualifierValue.Text = streakTypeCache.Id.ToString();
-                tbSourceQualifierField.Text = "StreakTypeId";
-            }
         }
 
         /// <summary>
@@ -999,22 +962,6 @@ namespace RockWeb.Blocks.Streaks
         private AchievementTypeCache GetAchievementTypeCache()
         {
             return AchievementTypeCache.Get( PageParameter( PageParameterKey.AchievementTypeId ).AsInteger() );
-        }
-
-        /// <summary>
-        /// Gets the achievement type cache.
-        /// </summary>
-        /// <returns></returns>
-        private StreakTypeCache GetStreakTypeCache()
-        {
-            var achievementTypeCache = GetAchievementTypeCache();
-
-            if ( achievementTypeCache != null )
-            {
-                return achievementTypeCache.StreakTypeCache;
-            }
-
-            return StreakTypeCache.Get( PageParameter( PageParameterKey.StreakTypeId ).AsInteger() );
         }
 
         /// <summary>

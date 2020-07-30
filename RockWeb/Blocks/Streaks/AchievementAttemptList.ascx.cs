@@ -24,6 +24,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Achievement;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
@@ -71,11 +72,6 @@ namespace RockWeb.Blocks.Streaks
             public const string AchievementTypeId = "AchievementTypeId";
 
             /// <summary>
-            /// The streak identifier
-            /// </summary>
-            public const string StreakId = "StreakId";
-
-            /// <summary>
             /// The streak achievement attempt identifier
             /// </summary>
             public const string AchievementAttemptId = "AchievementAttemptId";
@@ -87,14 +83,9 @@ namespace RockWeb.Blocks.Streaks
         private static class FilterKey
         {
             /// <summary>
-            /// The first name filter key
+            /// The achiever name filter key
             /// </summary>
-            public const string FirstName = "FirstName";
-
-            /// <summary>
-            /// The last name filter key
-            /// </summary>
-            public const string LastName = "LastName";
+            public const string AchieverName = "AchieverName";
 
             /// <summary>
             /// The attempt start date filter key
@@ -270,8 +261,7 @@ namespace RockWeb.Blocks.Streaks
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFilter.SaveUserPreference( FilterKey.FirstName, "First Name", tbFirstName.Text );
-            rFilter.SaveUserPreference( FilterKey.LastName, "Last Name", tbLastName.Text );
+            rFilter.SaveUserPreference( FilterKey.AchieverName, "Achiever Name", tbAchieverName.Text );
             rFilter.SaveUserPreference( FilterKey.AttemptStartDateRange, "Start Date", drpStartDate.DelimitedValues );
             rFilter.SaveUserPreference( FilterKey.Status, "Status", ddlStatus.SelectedValue );
             rFilter.SaveUserPreference( FilterKey.AchievementType, "Achievement Type", statPicker.SelectedValue );
@@ -293,8 +283,7 @@ namespace RockWeb.Blocks.Streaks
                     e.Value = achievementTypeCache != null ? achievementTypeCache.Name : string.Empty;
                     break;
                 case FilterKey.Status:
-                case FilterKey.FirstName:
-                case FilterKey.LastName:
+                case FilterKey.AchieverName:
                     break;
                 case FilterKey.AttemptStartDateRange:
                     e.Value = DateRangePicker.FormatDelimitedValues( e.Value );
@@ -335,12 +324,6 @@ namespace RockWeb.Blocks.Streaks
         {
             var parameters = new Dictionary<string, string>();
             var achievementType = GetAchievementTypeCache();
-            var streak = GetStreak();
-
-            if ( streak != null )
-            {
-                parameters[PageParameterKey.StreakId] = streak.Id.ToString();
-            }
 
             if ( achievementType != null )
             {
@@ -484,50 +467,43 @@ namespace RockWeb.Blocks.Streaks
         private AchievementTypeCache _achievementTypeCache = null;
 
         /// <summary>
-        /// Gets the streak.
-        /// </summary>
-        /// <returns></returns>
-        private Streak GetStreak()
-        {
-            if ( _streak == null )
-            {
-                var streakId = PageParameter( PageParameterKey.StreakId ).AsIntegerOrNull();
-
-                if ( streakId.HasValue )
-                {
-                    _streak = GetStreakService().Get( streakId.Value );
-                }
-            }
-
-            return _streak;
-        }
-        private Streak _streak = null;
-
-        /// <summary>
         /// Gets the attempts query.
         /// </summary>
         /// <returns></returns>
-        private IQueryable<AchievementAttempt> GetAttemptsQuery()
+        private IQueryable<AchieverAttemptItem> GetAttemptsQuery()
         {
+            if ( _attemptsQuery != null )
+            {
+                return _attemptsQuery;
+            }
+
+            var rockContext = GetRockContext();
             var achievementType = GetAchievementTypeCache();
-            var streak = GetStreak();
-            var attemptService = GetAttemptService();
+            var achievementTypes = AchievementTypeCache.All().Where( at => at.IsActive );
 
             if ( achievementType != null )
             {
-                return attemptService.Queryable()
-                    .AsNoTracking()
-                    .Where( saa => saa.AchievementTypeId == achievementType.Id );
+                achievementTypes = achievementTypes.Where( at => at.Id == achievementType.Id );
             }
 
-            if ( streak != null )
+            _attemptsQuery = Enumerable.Empty<AchieverAttemptItem>().AsQueryable();
+
+            foreach ( var at in achievementTypes )
             {
-                return attemptService.QueryByStreakId( streak.Id ).AsNoTracking();
+                var component = at.AchievementComponent;
+
+                if (component == null)
+                {
+                    continue;
+                }
+
+                var componentQuery = component.GetAchieverAttemptQuery( at, rockContext ).AsNoTracking();
+                _attemptsQuery = _attemptsQuery.Union( componentQuery );
             }
 
-            return attemptService.Queryable()
-                    .AsNoTracking();
+            return _attemptsQuery;
         }
+        private IQueryable<AchieverAttemptItem> _attemptsQuery = null;
 
         /// <summary>
         /// Determines whether the person is authorized to view attempts of this achievement type.
@@ -541,15 +517,6 @@ namespace RockWeb.Blocks.Streaks
                 if ( achievementType != null )
                 {
                     _canView = achievementType.IsAuthorized( Authorization.VIEW, CurrentPerson );
-                }
-                else
-                {
-                    var streak = GetStreak();
-
-                    if ( streak != null )
-                    {
-                        _canView = streak.IsAuthorized( Authorization.VIEW, CurrentPerson );
-                    }
                 }
             }
 
@@ -583,15 +550,6 @@ namespace RockWeb.Blocks.Streaks
                 {
                     rFilter.UserPreferenceKeyPrefix = string.Format( "{0}-", achievementType.Guid );
                 }
-                else
-                {
-                    var streak = GetStreak();
-
-                    if ( streak != null )
-                    {
-                        rFilter.UserPreferenceKeyPrefix = string.Format( "{0}-", streak.Guid );
-                    }
-                }
 
                 BindFilter();
             }
@@ -620,15 +578,6 @@ namespace RockWeb.Blocks.Streaks
                 if ( achievementNameCol != null )
                 {
                     achievementNameCol.Visible = false;
-                }
-            }
-            else if( GetStreak() != null )
-            {
-                var nameCol = gAttempts.ColumnsOfType<RockLiteralField>().FirstOrDefault( c => c.ID == _nameWithHtmlFieldId );
-
-                if ( nameCol != null )
-                {
-                    nameCol.Visible = false;
                 }
             }
         }
@@ -660,19 +609,7 @@ namespace RockWeb.Blocks.Streaks
                 statPicker.Visible = false;
             }
 
-            if ( GetStreak() == null )
-            {
-                tbFirstName.Text = rFilter.GetUserPreference( FilterKey.FirstName );
-                tbLastName.Text = rFilter.GetUserPreference( FilterKey.LastName );
-            }
-            else
-            {
-                tbFirstName.Text = string.Empty;
-                tbLastName.Text = string.Empty;
-                tbFirstName.Visible = false;
-                tbLastName.Visible = false;
-            }
-
+            tbAchieverName.Text = rFilter.GetUserPreference( FilterKey.AchieverName );
             drpStartDate.DelimitedValues = rFilter.GetUserPreference( FilterKey.AttemptStartDateRange );
             ddlStatus.SelectedValue = rFilter.GetUserPreference( FilterKey.Status );
         }
@@ -740,9 +677,6 @@ namespace RockWeb.Blocks.Streaks
         protected void BindGrid()
         {
             var achievementType = GetAchievementTypeCache();
-            var achieverEntityTypeCache = achievementType.AchieverEntityTypeCache;
-            var isAchieverPerson = achievementType != null && achievementType.AchieverEntityTypeId == EntityTypeCache.GetId<Person>();
-            var isAchieverPersonAlias = achievementType != null && achievementType.AchieverEntityTypeId == EntityTypeCache.GetId<PersonAlias>();
 
             if ( achievementType != null )
             {
@@ -754,23 +688,12 @@ namespace RockWeb.Blocks.Streaks
             }
 
             var query = GetAttemptsQuery();
-            var personAliasQuery = GetPersonAliasService().Queryable()
-                .AsNoTracking();
 
-            // Filter by First Name
-            var firstName = tbFirstName.Text;
-            if ( !firstName.IsNullOrWhiteSpace() )
+            // Filter by Achiever Name
+            var achieverName = tbAchieverName.Text;
+            if ( !achieverName.IsNullOrWhiteSpace() )
             {
-                personAliasQuery = personAliasQuery.Where( pa =>
-                    pa.Person.FirstName.StartsWith( firstName ) ||
-                    pa.Person.NickName.StartsWith( firstName ) );
-            }
-
-            // Filter by Last Name
-            var lastName = tbLastName.Text;
-            if ( !lastName.IsNullOrWhiteSpace() )
-            {
-                personAliasQuery = personAliasQuery.Where( saa => saa.Person.LastName.StartsWith( lastName ) );
+                query = query.Where( aa => aa.AchieverName.StartsWith( achieverName ) );
             }
 
             // Filter by start Date
@@ -778,19 +701,19 @@ namespace RockWeb.Blocks.Streaks
 
             if ( startDateRange.Start.HasValue )
             {
-                query = query.Where( saa => saa.AchievementAttemptStartDateTime >= startDateRange.Start.Value );
+                query = query.Where( aa => aa.AchievementAttempt.AchievementAttemptStartDateTime >= startDateRange.Start.Value );
             }
 
             if ( startDateRange.End.HasValue )
             {
-                query = query.Where( saa => saa.AchievementAttemptStartDateTime <= startDateRange.End.Value );
+                query = query.Where( aa => aa.AchievementAttempt.AchievementAttemptStartDateTime <= startDateRange.End.Value );
             }
 
             // Filter by achievement type
             var achievementTypeId = statPicker.SelectedValue.AsIntegerOrNull();
             if ( achievementTypeId.HasValue )
             {
-                query = query.Where( saa => saa.AchievementTypeId == achievementTypeId.Value );
+                query = query.Where( aa => aa.AchievementAttempt.AchievementTypeId == achievementTypeId.Value );
             }
 
             // Filter by status
@@ -801,93 +724,46 @@ namespace RockWeb.Blocks.Streaks
 
                 if ( status == "successful" )
                 {
-                    query = query.Where( saa => saa.IsSuccessful );
+                    query = query.Where( aa => aa.AchievementAttempt.IsSuccessful );
                 }
                 else if ( status == "unsuccessful" )
                 {
-                    query = query.Where( saa => !saa.IsSuccessful && saa.IsClosed );
+                    query = query.Where( aa => !aa.AchievementAttempt.IsSuccessful && aa.AchievementAttempt.IsClosed );
                 }
                 else if ( status == "open" )
                 {
-                    query = query.Where( saa => !saa.IsClosed );
+                    query = query.Where( aa => !aa.AchievementAttempt.IsClosed );
                 }
             }
 
-            IQueryable<JoinedQueryViewModel> joinedQuery;
-
-            if ( isAchieverPerson )
-            {
-                joinedQuery = query.Join(
-                    personAliasQuery,
-                    aa => aa.AchieverEntityId,
-                    pa => pa.PersonId,
-                    ( aa, pa ) => new JoinedQueryViewModel
-                    {
-                        AchievementAttempt = aa,
-                        Achiever = pa.Person
-                    } );
-            }
-            else if ( isAchieverPersonAlias )
-            {
-                joinedQuery = query.Join(
-                    personAliasQuery,
-                    aa => aa.AchieverEntityId,
-                    pa => pa.Id,
-                    ( aa, pa ) => new JoinedQueryViewModel
-                    {
-                        AchievementAttempt = aa,
-                        Achiever = pa.Person
-                    } );
-            }
-            else
-            {
-                var entityTypeService = GetEntityTypeService();
-                var achieverQuery = entityTypeService
-                    .GetEntitiesQuery(
-                        achievementType.AchieverEntityTypeId,
-                        achievementType.SourceEntityQualifierColumn,
-                        achievementType.SourceEntityQualifierValue )
-                    .AsNoTracking();
-
-                joinedQuery = query.Join(
-                    achieverQuery,
-                    aa => aa.AchieverEntityId,
-                    a => a.Id,
-                    ( aa, a ) => new JoinedQueryViewModel
-                    {
-                        AchievementAttempt = aa,
-                        Achiever = a
-                    } );
-            }
-
-            var viewModels = joinedQuery.ToList().Select( aa => new AttemptViewModel
+            var viewModelQuery = query.Select( aa => new AttemptViewModel
             {
                 Id = aa.AchievementAttempt.Id,
-                AchieverName = aa.Achiever.ToStringSafe(),
+                AchieverName = aa.AchieverName,
                 StartDate = aa.AchievementAttempt.AchievementAttemptStartDateTime,
                 EndDate = aa.AchievementAttempt.AchievementAttemptEndDateTime,
                 IsSuccessful = aa.AchievementAttempt.IsSuccessful,
                 IsClosed = aa.AchievementAttempt.IsClosed,
                 Progress = aa.AchievementAttempt.Progress,
                 AchievementName = aa.AchievementAttempt.AchievementType.Name
-            } ).AsQueryable();
+            } );
 
             // Sort the grid
             var sortProperty = gAttempts.SortProperty;
 
             if ( sortProperty != null )
             {
-                viewModels = viewModels.Sort( sortProperty );
+                viewModelQuery = viewModelQuery.Sort( sortProperty );
             }
             else
             {
-                viewModels = viewModels
+                viewModelQuery = viewModelQuery
                     .OrderBy( avm => avm.IsClosed )
                     .OrderByDescending( avm => avm.StartDate )
                     .ThenBy( avm => avm.AchieverName );
             }
 
-            gAttempts.SetLinqDataSource( viewModels );
+            gAttempts.SetLinqDataSource( viewModelQuery );
             gAttempts.DataBind();
         }
 
