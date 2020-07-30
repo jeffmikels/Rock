@@ -228,7 +228,7 @@
                 </div>
 
             <%-- Panel Body --%>
-            <div class="panel-body panel-body-scroll p-0">
+            <div class="panel-body panel-body-parent p-0">
 
                 <div class="visible-xs-block">
                     <div class="alert alert-warning">
@@ -250,7 +250,7 @@
 
                             <div class="row row-eq-height no-gutters">
                                 <div class="col-lg-3 col-md-4 hidden-xs">
-
+                                    <div class="d-flex flex-column flex-fill h-100 mh-100 sidebar-border">
                                     <%-- Resource List - Person List --%>
 
                                     <%-- Resource List - Filter Options (Header Options) --%>
@@ -264,8 +264,8 @@
                                         </asp:Panel>
                                     </div>
 
-                                    <asp:Panel ID="pnlSchedulerResourceList" runat="server" CssClass="group-scheduler-resourcelist">
-
+                                    <asp:Panel ID="pnlSchedulerResourceList" runat="server" CssClass="group-scheduler-resourcelist d-flex flex-column flex-fill mh-100">
+                                        <div class="hidden">
                                         <Rock:HiddenFieldWithClass ID="hfOccurrenceGroupId" CssClass="js-occurrence-group-id" runat="server" />
                                         <Rock:HiddenFieldWithClass ID="hfOccurrenceSundayDate" CssClass="js-occurrence-sunday-date" runat="server" />
                                         <Rock:HiddenFieldWithClass ID="hfOccurrenceScheduleIds" CssClass="js-occurrence-schedule-ids" runat="server" />
@@ -273,34 +273,35 @@
                                         <Rock:HiddenFieldWithClass ID="hfResourceGroupMemberFilterType" CssClass="js-resource-groupmemberfiltertype" runat="server" />
                                         <Rock:HiddenFieldWithClass ID="hfResourceDataViewId" CssClass="js-resource-dataview-id" runat="server" />
                                         <Rock:HiddenFieldWithClass ID="hfResourceAdditionalPersonIds" CssClass="js-resource-additional-person-ids" runat="server" />
-
+                                        </div>
                                         <div class="js-unscheduled-resource-template" style="display: none">
                                             <%-- template that groupScheduler.js uses to populate unscheduled resources, data-status will always be "unscheduled" when it is in the list of unscheduled resources --%>
 
                                             <div class="js-resource resource unselectable" data-status="unscheduled" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-is-scheduled="" data-person-id="">
                                                 <div class="flex">
                                                     <span class="resource-name js-resource-name"></span>
-
-                                                    <div class="resource-assignment-preference js-resource-assignment-preference">
-                                                    </div>
-
-                                                    <div class="resource-member-role js-resource-member-role">
+                                                    <div class="js-resource-name-meta">
+                                                    <span class="resource-member-role js-resource-member-role"></span>
                                                     </div>
                                                 </div>
+                                                    <div class="resource-assignment-preference js-resource-assignment-preference hide-transit small text-muted">
+                                                    </div>
+
                                                 <div class="resource-meta">
                                                     <div class="js-resource-meta text-right"></div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div class="panel panel-block h-100 m-0 resource-list border-top-0">
-
                                             <div class="js-add-resource-picker margin-all-sm" style="display: none">
                                                 <Rock:PersonPicker ID="ppAddPerson" runat="server" Label="Select Person" OnSelectPerson="ppAddPerson_SelectPerson" />
                                             </div>
 
-                                            <div class="panel-body h-100 p-0">
                                                 <Rock:RockTextBox ID="sfResource" runat="server" CssClass="resource-search padding-all-sm js-resource-search" PrependText="<i class='fa fa-search'></i>" Placeholder="Search" spellcheck="false" />
+
+
+                                        <div class="resource-list d-flex flex-fill">
+
 
                                                 <div class="scroll-list">
                                                     <%-- loading indicator --%>
@@ -311,13 +312,14 @@
                                                     <asp:Panel ID="pnlResourceListContainer" CssClass="js-scheduler-source-container resource-container dropzone" runat="server">
                                                     </asp:Panel>
                                                 </div>
-                                            </div>
+
                                         </div>
                                     </asp:Panel>
                                 </div>
+                                </div>
 
                                 <div class="col-lg-9 col-md-8">
-
+                                    <div class="board-scroll">
                                     <div class="js-scheduled-resource-template" style="display: none">
                                         <%-- template that groupScheduler.js uses to populate scheduled resources, possible data-status values: pending, confirmed, declined --%>
 
@@ -325,8 +327,7 @@
 
                                             <div class="flex">
                                                 <span class="resource-name js-resource-name flex-grow-1"></span>
-                                                <div class="resource-member-role js-resource-member-role">
-                                                </div>
+                                                <span class="resource-member-role js-resource-member-role"></span>
 
                                                 <div class="resource-meta">
 
@@ -398,10 +399,12 @@
                                                     </asp:Panel>
 
                                                     <%-- Occurrence Column Heading when in Single-Group mode (show schedule information) --%>
-                                                    <asp:Panel ID="pnlSingleGroupModeColumnHeading" runat="server">
-                                                        <h1>
-                                                            <asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceDate" runat="server" /></h1>
-                                                        <asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceTime" runat="server" />
+                                                    <asp:Panel ID="pnlSingleGroupModeColumnHeading" runat="server" CssClass="board-heading mt-3">
+                                                        <div class="d-flex justify-content-between">
+                                                            <span class="board-column-title"><asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceDate" runat="server" /></span>
+                                                            <asp:Literal ID="lSingleGroupModeColumnHeadingOccurrenceTime" runat="server" />
+                                                        </div>
+                                                        <div class="board-heading-pill mt-2 mb-3" style="background:#C8C8C8"></div>
                                                     </asp:Panel>
                                                     <div class="board-cards">
                                                     <asp:Repeater ID="rptAttendanceOccurrences" runat="server" OnItemDataBound="rptAttendanceOccurrences_ItemDataBound">
@@ -471,6 +474,7 @@
 
 
                                     </asp:Panel>
+                                    </div>
                                 </div>
                             </div>
                         </asp:Panel>

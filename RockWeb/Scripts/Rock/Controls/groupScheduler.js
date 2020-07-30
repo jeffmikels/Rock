@@ -47,7 +47,7 @@
                             // don't let resources with a full blackout or requirement conflicts to be scheduled
                             return false;
                         }
-                        
+
                         if (source.classList.contains('js-scheduler-target-container')) {
                             // If multi-group mode this will be a group, and resources can only be dragged out of this occurrence column it is the the currently selected (active) group
                             // In single-group mode, this will be a schedule/day, so resources can be dragged out of any occurrence column
@@ -553,28 +553,29 @@
                     $resourceMeta.parent().prepend('<div class="resource-note js-resource-note hide-transit">' + schedulerResource.Note + '</div>');
                 }
 
+                var $resourceNameMeta = $resourceDiv.find('.js-resource-name-meta');
                 if (schedulerResource.ConflictNote) {
-                    $resourceMeta.append('<span class="resource-warning hide-transit">' + schedulerResource.ConflictNote + '</span>')
+                    $resourceNameMeta.append('<span class="resource-warning hide-transit">' + schedulerResource.ConflictNote + '</span>')
                 }
 
                 if (schedulerResource.HasSchedulingConflict) {
-                    $resourceMeta.append('<span class="resource-scheduling-conflict hide-transit" title="Scheduling Conflict"><i class="fa fa-user-clock"></i></span>');
+                    $resourceNameMeta.append('<span class="resource-scheduling-conflict hide-transit" title="Scheduling Conflict"><i class="fa fa-user-clock"></i></span>');
                 }
 
                 if (schedulerResource.HasBlackoutConflict) {
-                    $resourceMeta.append('<span class="resource-blackout-status hide-transit" title="Blackout"><i class="fa fa-user-times"></i></span>');
+                    $resourceNameMeta.append('<span class="resource-blackout-status hide-transit" title="Blackout"><i class="fa fa-user-times"></i></span>');
                 }
 
                 if (schedulerResource.HasPartialBlackoutConflict) {
-                    $resourceMeta.append('<span class="resource-partial-blackout-status hide-transit" title="Partial Blackout"><i class="fa fa-user-clock"></i></span>');
+                    $resourceNameMeta.append('<span class="resource-partial-blackout-status hide-transit" title="Partial Blackout"><i class="fa fa-user-clock"></i></span>');
                 }
 
                 if (schedulerResource.HasGroupRequirementsConflict) {
-                    $resourceMeta.append('<span class="resource-requirements-conflict hide-transit" title="Group Requirements Not Met"><i class="fa fa-exclamation-triangle"></i></span>');
+                    $resourceNameMeta.append('<span class="resource-requirements-conflict hide-transit" title="Group Requirements Not Met"><i class="fa fa-exclamation-triangle"></i></span>');
                 }
 
                 if (schedulerResource.LastAttendanceDateTime) {
-                    $resourceMeta.append('<span class="resource-lastattendeddate hide-transit" title="Last Attended" data-datetime="' + schedulerResource.LastAttendanceDateTime + '">' + schedulerResource.LastAttendanceDateTimeFormatted + '</span>');
+                    $resourceNameMeta.append('<span class="resource-lastattendeddate hide-transit" title="Last Attended" data-datetime="' + schedulerResource.LastAttendanceDateTime + '">' + schedulerResource.LastAttendanceDateTimeFormatted + '</span>');
                 }
 
                 // stuff that only applies to unscheduled resource

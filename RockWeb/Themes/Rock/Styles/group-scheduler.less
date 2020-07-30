@@ -19,15 +19,25 @@
 @belowminimum-icon-color: fade(@brand-danger, 75%);
 
 
-.panel-body-scroll {
+.panel-body-parent {
   height: ~"calc(100vh - 290px)";
   min-height: 200px;
+  overflow: hidden;
+}
+
+.board-scroll {
+  width: 100%;
+  height: 100%;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: scroll;
 }
 
 .group-scheduler {
   // Duplicated Style for Embedding in External Themes
+  .sidebar-border {
+    border-right: 1px solid @panel-default-border;
+  }
+
   .panel.panel-block {
 
     position: relative;
@@ -76,16 +86,9 @@
 }
 
 .resource-list {
-  position: sticky !important;
-  top: 16px;
-  max-height: ~"calc(100vh - 32px)";
+  max-height: none !important;
 
-  .is-fullscreen & {
-    top: 16px;
-    max-height: ~"calc(100vh - 100px)";
-  }
-
-  .panel-body {
+  // .panel-body {
     position: relative;
     display: -ms-flexbox !important;
     display: flex !important;
@@ -93,8 +96,9 @@
     -ms-flex-direction: column !important;
     flex-direction: column !important;
     width: 100%;
+    top: auto !important;
     overflow: hidden;
-  }
+  // }
 
   .scroll-list {
     flex-shrink: 1 !important;
@@ -104,8 +108,8 @@
     padding: 12px;
     overflow-y: scroll;
     background-color: fade(@panel-heading-bg, 40%);
-    -ms-flex-positive: 1 !important;
-    -ms-flex-negative: 1 !important;
+    // -ms-flex-positive: 1 !important;
+    // -ms-flex-negative: 1 !important;
 
     &::-webkit-scrollbar {
       width: 6px;
@@ -222,6 +226,13 @@
     //display: block;
     margin-right: 20px;
     white-space: nowrap;
+  }
+
+  .resource-assignment {
+    &:first-child {
+      margin-top: 6px;
+    }
+    margin-top: 4px;
   }
 
   .dropdown-menu {
@@ -354,7 +365,8 @@
     border-radius: 0;
     box-shadow: none;
 
-    .resource-meta {
+    .resource-meta,
+    .resource-assignment-preference {
       display: none;
     }
   }
@@ -377,11 +389,12 @@
   text-overflow: ellipsis;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  margin-top: 8px;
 }
 
 /* Resource List */
 .group-scheduler-resourcelist {
-  height: 100%;
+  height: 1px;
 
   .resource {
     .flex {
@@ -392,10 +405,10 @@
       }
     }
 
-    &.has-note .flex {
-      -ms-flex-direction: column !important;
-      flex-direction: column !important;
-    }
+    // &.has-note .flex {
+    //   -ms-flex-direction: column !important;
+    //   flex-direction: column !important;
+    // }
   }
 
 
@@ -570,6 +583,7 @@
 .scheduler-target-container .resource.gu-transit,
 .resource.gu-mirror {
   max-width: 270px;
+  max-height: 51px;
 
   .hide-transit {
     display: none;
