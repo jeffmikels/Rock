@@ -86,7 +86,7 @@
                     <div class="row row-eq-height no-gutters">
                         <div class="col-lg-3 col-md-4">
                             <%-- Resource List - Filter Options (Header) --%>
-                            <div class="panel-toolbar h-100 pr-1 resource-filter-options d-flex justify-content-between align-items-center">
+                            <div class="panel-toolbar styled-scroll-white h-100 pr-1 resource-filter-options d-flex justify-content-between align-items-center">
                                 <asp:Panel ID="pnlResourceListFilter" runat="server">
                                     <div class="btn-group">
                                         <div class="dropdown-toggle btn btn-xs" data-toggle="dropdown">
