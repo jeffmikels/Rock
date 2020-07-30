@@ -1073,9 +1073,6 @@ btnCopyToClipboard.ClientID );
                 return;
             }
 
-            pnlAutoScheduleMultiGroupMode.Visible = true;
-            btnAutoScheduleSingleGroupMode.Visible = true;
-
             var scheduleOccurrenceDatesLookupByScheduleId = new Dictionary<int, List<DateTime>>();
 
             foreach ( var occurrenceSchedule in occurrenceSchedules )
