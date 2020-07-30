@@ -69,6 +69,10 @@ namespace RockWeb.Blocks.Oidc
 
         #endregion Keys
 
+        private const string AntiXsrfTokenKey = "__AntiXsrfToken";
+        protected string _antiXsrfTokenValue;
+
+
         #region Base Control Methods
 
         /// <summary>
@@ -80,6 +84,78 @@ namespace RockWeb.Blocks.Oidc
             base.OnInit( e );
         }
 
+        private string GetAntiForgeryToken()
+        {
+            //First, check for the existence of the Anti-XSS cookie
+            var requestCookie = Request.Cookies[AntiXsrfTokenKey];
+            Guid requestCookieGuidValue;
+
+            //If the CSRF cookie is found, parse the token from the cookie.
+            //Then, set the global page variable and view state user
+            //key. The global variable will be used to validate that it matches in the view state form field in the Page.PreLoad
+            //method.
+            if ( requestCookie != null
+            && Guid.TryParse( requestCookie.Value, out requestCookieGuidValue ) )
+            {
+                //Set the global token variable so the cookie value can be
+                //validated against the value in the view state form field in
+                //the Page.PreLoad method.
+                _antiXsrfTokenValue = requestCookie.Value;
+
+                //Set the view state user key, which will be validated by the
+                //framework during each request
+                //Page.ViewStateUserKey = _antiXsrfTokenValue;
+            }
+            return _antiXsrfTokenValue;
+        }
+
+        private string CreateAntiForgeryToken()
+        {
+            
+                //Generate a new Anti-XSRF token
+                _antiXsrfTokenValue = Guid.NewGuid().ToString( "N" );
+
+                //Set the view state user key, which will be validated by the
+                //framework during each request
+                //Page.ViewStateUserKey = _antiXsrfTokenValue;
+
+                //Create the non-persistent CSRF cookie
+                var responseCookie = new HttpCookie( AntiXsrfTokenKey )
+                {
+                    //Set the HttpOnly property to prevent the cookie from
+                    //being accessed by client side script
+                    HttpOnly = true,
+
+                    //Add the Anti-XSRF token to the cookie value
+                    Value = _antiXsrfTokenValue
+                };
+
+                //If we are using SSL, the cookie should be set to secure to
+                //prevent it from being sent over HTTP connections
+                // TODO: if ssl secur cookie
+                //if ( FormsAuthentication.RequireSSL &&
+                //Request.IsSecureConnection )
+                //    responseCookie.Secure = true;
+
+                //Add the CSRF cookie to the response
+                Response.Cookies.Set( responseCookie );
+
+            return _antiXsrfTokenValue;
+        }
+
+        private bool ValidateAntiForgeryToken(string antiXsrfTokenKey )
+        {
+            //During the initial page load, add the Anti-XSRF token and user
+            GetAntiForgeryToken();
+
+            //Validate the Anti-XSRF token
+            if (string.IsNullOrWhiteSpace(antiXsrfTokenKey) || string.IsNullOrWhiteSpace( _antiXsrfTokenValue) || antiXsrfTokenKey != _antiXsrfTokenValue)
+            {
+                return false;
+            }
+            return true;
+        }
+            
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
         /// </summary>
@@ -90,16 +166,22 @@ namespace RockWeb.Blocks.Oidc
 
             // We have to use querystring, because something in the .net postback chain writes to the Response object which breaks the auth call.
             var action = PageParameter( PageParamKey.Action );
+            var token = PageParameter( "token" );
 
-            switch ( action )
+            if (!string.IsNullOrWhiteSpace(action) && ValidateAntiForgeryToken( token ) )
             {
-                case "approve":
-                    AcceptAuthorization();
-                    return;
-                case "deny":
-                    DenyAuthorization();
-                    return;
+                switch ( action )
+                {
+                    case "approve":
+                        AcceptAuthorization();
+                        return;
+                    case "deny":
+                        DenyAuthorization();
+                        return;
+                }
             }
+
+            CreateAntiForgeryToken();
 
             Task.Run( async () =>
             {

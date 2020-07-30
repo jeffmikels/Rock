@@ -16,11 +16,15 @@
 //
 
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AspNet.Security.OpenIdConnect.Primitives;
+using Microsoft.Owin.Security;
+using Owin.Security.OpenIdConnect.Extensions;
 using Owin.Security.OpenIdConnect.Server;
 using Rock.Data;
 using Rock.Model;
+using Rock.Security;
 
 namespace Rock.Oidc
 {
@@ -30,9 +34,107 @@ namespace Rock.Oidc
     /// <seealso cref="OpenIdConnectServerProvider" />
     public class AuthorizationProvider : OpenIdConnectServerProvider
     {
-        public override Task HandleTokenRequest( HandleTokenRequestContext context )
+        public override async Task HandleTokenRequest( HandleTokenRequestContext context )
         {
-            return base.HandleTokenRequest( context );
+            var rockContext = new RockContext();
+            var userLoginService = new UserLoginService( rockContext );
+
+
+            // Only handle grant_type=password requests and let ASOS
+            // process grant_type=refresh_token requests automatically.
+            if ( context.Request.IsPasswordGrantType() )
+            {
+                var user = userLoginService.GetByUserName( context.Request.Username );
+                if ( user == null )
+                {
+                    context.Reject(
+                        error: OpenIdConnectConstants.Errors.InvalidGrant,
+                        description: "Invalid credentials." );
+                    return;
+                }
+
+                // Ensure the user is allowed to sign in.
+                if ( !user.IsConfirmed.HasValue || !user.IsConfirmed.Value || ( user.IsPasswordChangeRequired != null && user.IsPasswordChangeRequired.Value ) )
+                {
+                    context.Reject(
+                        error: OpenIdConnectConstants.Errors.InvalidGrant,
+                        description: "The specified user is not allowed to sign in." );
+                    return;
+                }
+
+                // Reject the token request if two-factor authentication has been enabled by the user.
+                //if ( manager.SupportsUserTwoFactor && await manager.GetTwoFactorEnabledAsync( user ) )
+                //{
+                //    context.Reject(
+                //        error: OpenIdConnectConstants.Errors.InvalidGrant,
+                //        description: "Two-factor authentication is required for this account." );
+                //    return;
+                //}
+
+                // Ensure the user is not already locked out.
+                if ( user.IsLockedOut != null && user.IsLockedOut.Value )
+                {
+                    context.Reject(
+                        error: OpenIdConnectConstants.Errors.InvalidGrant,
+                        description: "Invalid credentials." );
+                    return;
+                }
+
+                // Ensure the password is valid.
+                var component = AuthenticationContainer.GetComponent( user.EntityType.Name );
+
+                if ( component == null || !component.IsActive || !component.Authenticate( user, context.Request.Password ) )
+                {
+                    // TODO: Lock account after failed attempts?
+                    //if ( manager.SupportsUserLockout )
+                    //{
+                    //    await manager.AccessFailedAsync( user );
+                    //}
+                    context.Reject(
+                        error: OpenIdConnectConstants.Errors.InvalidGrant,
+                        description: "Invalid credentials." );
+                    return;
+                }
+
+                // TODO: Reset failed attempts.
+                //if ( manager.SupportsUserLockout )
+                //{
+                //    await manager.ResetAccessFailedCountAsync( user );
+                //}
+                var identity = new ClaimsIdentity(
+                        OpenIdConnectServerDefaults.AuthenticationType,
+                        OpenIdConnectConstants.Claims.Name,
+                        OpenIdConnectConstants.Claims.Role );
+                // Note: the subject claim is always included in both identity and
+                // access tokens, even if an explicit destination is not specified.
+
+                identity.AddClaim(
+               new Claim( OpenIdConnectConstants.Claims.Subject, user.UserName )
+                   .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                    OpenIdConnectConstants.Destinations.IdentityToken ) );
+
+
+                // When adding custom claims, you MUST specify one or more destinations.
+                // Read "part 7" for more information about custom claims and scopes.
+                identity.AddClaim(
+                new Claim( OpenIdConnectConstants.Claims.Name, user.Person.FullName )
+                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
+
+                // Create a new authentication ticket holding the user identity.
+                var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );
+
+                // Set the list of scopes granted to the client application.
+                ticket.SetScopes(
+                    /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
+                    /* email: */ OpenIdConnectConstants.Scopes.Email,
+                    /* profile: */ OpenIdConnectConstants.Scopes.Profile );
+
+                // Set the resource servers the access token should be issued for.
+                ticket.SetResources( "resource_server" );
+                context.Validate( ticket );
+
+            }
         }
 
         /// <summary>
@@ -105,7 +207,7 @@ namespace Rock.Oidc
             // Note: the OpenID Connect server middleware supports authorization code, refresh token, client credentials
             // and resource owner password credentials grant types but this authorization provider uses a safer policy
             // rejecting the last two ones. You may consider relaxing it to support the ROPC or client credentials grant types.
-            if ( !context.Request.IsAuthorizationCodeGrantType() && !context.Request.IsRefreshTokenGrantType() )
+            if ( !context.Request.IsAuthorizationCodeGrantType() && !context.Request.IsRefreshTokenGrantType() && !context.Request.IsTokenRequest() )
             {
                 context.Reject(
                     error: OpenIdConnectConstants.Errors.UnsupportedGrantType,

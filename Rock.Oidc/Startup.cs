@@ -18,6 +18,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Owin;
 using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.DataProtection;
 using Owin;
 
 namespace Rock.Oidc
@@ -83,6 +84,8 @@ namespace Rock.Oidc
                 // Register the logging listeners used by the OpenID Connect server middleware.
                 // options.UseLogging( logger => logger.AddConsole().AddDebug() );
             } );
+
+            
         }
     }
 }

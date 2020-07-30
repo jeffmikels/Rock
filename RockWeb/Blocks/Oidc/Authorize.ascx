@@ -4,7 +4,6 @@
     <ContentTemplate>
 
         <Rock:NotificationBox ID="nbNotificationBox" runat="server" NotificationBoxType="Danger" Visible="false" Title="Error" />
-
         <asp:Panel ID="pnlPanel" CssClass="panel panel-block" runat="server">
             <div class="panel-heading">
                 <h1 class="panel-title">
@@ -26,8 +25,8 @@
                 </ul>
 
                 <div class="actions">
-                    <a href="<%= Request.RawUrl %>&action=approve" class="btn btn-success">Yes</a>
-                    <a href="<%= Request.RawUrl %>&action=deny" class="btn btn-success">No</a>
+                    <a href="<%= Request.RawUrl %>&action=approve&token=<%= HttpUtility.UrlEncode(_antiXsrfTokenValue) %>" class="btn btn-success">Yes</a>
+                    <a href="<%= Request.RawUrl %>&action=deny&token=<%= HttpUtility.UrlEncode(_antiXsrfTokenValue) %>" class="btn btn-success">No</a>
                 </div>
             </div>
         </asp:Panel>
