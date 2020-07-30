@@ -25,7 +25,7 @@
                     </button>
 
                     <asp:HiddenField ID="hfDisplayedOccurrenceIds" runat="server" />
-                    
+
                     <asp:LinkButton ID="btnSendNowSingleGroupMode" runat="server" CssClass="js-sendnow btn btn-default btn-xs" OnClick="btnSendNowSelectedGroup_Click">
                         <i class="fa fa-envelope"></i>
                         Send Now
@@ -47,8 +47,8 @@
                         </ul>
                     </asp:Panel>
                     <Rock:ModalAlert ID="maSendNowResults" runat="server" />
-                    
-                    
+
+
                     <asp:LinkButton ID="btnAutoScheduleSingleGroupMode" runat="server" CssClass="js-autoschedule btn btn-default btn-xs" OnClick="btnAutoScheduleSelectedGroup_Click">
                         <i class="fa fa-magic"></i>
                         Auto Schedule
@@ -228,7 +228,7 @@
                 </div>
 
             <%-- Panel Body --%>
-            <div class="panel-body p-0">
+            <div class="panel-body panel-body-scroll p-0">
 
                 <div class="visible-xs-block">
                     <div class="alert alert-warning">
@@ -243,11 +243,10 @@
                 <Rock:NotificationBox ID="nbSchedulingDisabledWarning" runat="server" NotificationBoxType="Warning" Dismissable="true" />
                 <asp:Literal ID="lDebug" runat="server" Visible="false" />
 
-                <div class="">
-                    <asp:Panel ID="pnlSchedulerContainer" runat="server" CssClass="">
+                    <asp:Panel ID="pnlSchedulerContainer" runat="server" CssClass="h-100">
 
                         <%-- Scheduling: container for the scheduler scheduled containers --%>
-                        <asp:Panel ID="pnlScheduler" runat="server" CssClass="resource-area">
+                        <asp:Panel ID="pnlScheduler" runat="server" CssClass="h-100">
 
                             <div class="row row-eq-height no-gutters">
                                 <div class="col-lg-3 col-md-4 hidden-xs">
@@ -255,12 +254,12 @@
                                     <%-- Resource List - Person List --%>
 
                                     <%-- Resource List - Filter Options (Header Options) --%>
-                                    <div class="group-schedule-filter-options p-2 clearfix">
-                                        <asp:Panel ID="pnlResourceFilterAlternateGroup" runat="server">
+                                    <div class="group-schedule-filter-options clearfix">
+                                        <asp:Panel ID="pnlResourceFilterAlternateGroup" runat="server" CssClass="m-2">
                                             <Rock:GroupPicker ID="gpResourceListAlternateGroup" runat="server" Label="Alternate Group" OnValueChanged="gpResourceListAlternateGroup_ValueChanged" />
                                         </asp:Panel>
 
-                                        <asp:Panel ID="pnlResourceFilterDataView" runat="server">
+                                        <asp:Panel ID="pnlResourceFilterDataView" runat="server" CssClass="m-2">
                                             <Rock:DataViewItemPicker ID="dvpResourceListDataView" runat="server" Label="Data View" EntityTypeId="15" OnValueChanged="dvpResourceListDataView_ValueChanged" />
                                         </asp:Panel>
                                     </div>
@@ -287,21 +286,20 @@
 
                                                     <div class="resource-member-role js-resource-member-role">
                                                     </div>
-
-                                                    <div class="resource-meta">
-                                                        <div class="js-resource-meta text-right"></div>
-                                                    </div>
+                                                </div>
+                                                <div class="resource-meta">
+                                                    <div class="js-resource-meta text-right"></div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div class="panel panel-block resource-list">
+                                        <div class="panel panel-block h-100 m-0 resource-list border-top-0">
 
                                             <div class="js-add-resource-picker margin-all-sm" style="display: none">
                                                 <Rock:PersonPicker ID="ppAddPerson" runat="server" Label="Select Person" OnSelectPerson="ppAddPerson_SelectPerson" />
                                             </div>
 
-                                            <div class="panel-body p-0">
+                                            <div class="panel-body h-100 p-0">
                                                 <Rock:RockTextBox ID="sfResource" runat="server" CssClass="resource-search padding-all-sm js-resource-search" PrependText="<i class='fa fa-search'></i>" Placeholder="Search" spellcheck="false" />
 
                                                 <div class="scroll-list">
@@ -422,7 +420,7 @@
                                                                                 <div>
                                                                                     <asp:Literal runat="server" ID="lMultiGroupModeOccurrenceScheduledTime" />
 
-                                                                                    <span class="autoscheduler-warning js-autoscheduler-warning" data-original-title="Auto Schedule requires a desired capacity for this location.">
+                                                                                    <span class="autoscheduler-warning js-autoscheduler-warning" data-placement="bottom" data-original-title="Auto Schedule requires a desired capacity for this location.">
                                                                                         <i class="fa fa-exclamation-triangle"></i>
                                                                                     </span>
                                                                                 </div>
@@ -432,14 +430,14 @@
                                                                             <asp:Panel ID="pnlSingleGroupModePanelHeading" runat="server">
                                                                                 <asp:Literal ID="lSingleGroupModeLocationTitle" runat="server" />
 
-                                                                                <span class="autoscheduler-warning js-autoscheduler-warning" data-original-title="Auto Schedule requires a desired capacity for this location.">
+                                                                                <span class="autoscheduler-warning js-autoscheduler-warning" data-placement="bottom" data-original-title="Auto Schedule requires a desired capacity for this location.">
                                                                                         <i class="fa fa-exclamation-triangle"></i>
                                                                                     </span>
                                                                             </asp:Panel>
                                                                     </div>
 
                                                                     <asp:Panel ID="pnlStatusLabels" runat="server" CssClass="panel-labels">
-                                                                        <div class="scheduling-status js-scheduling-status">
+                                                                        <div class="scheduling-status js-scheduling-status" data-placement="bottom">
                                                                             <div class="scheduling-status-progress">
                                                                                 <div class="progress js-scheduling-progress">
                                                                                     <div class="progress-bar scheduling-progress-confirmed js-scheduling-progress-confirmed" style="width: 0%">
@@ -477,7 +475,6 @@
                             </div>
                         </asp:Panel>
                     </asp:Panel>
-                </div>
             </div>
         </asp:Panel>
 
@@ -494,7 +491,7 @@
                             <asp:ListItem Text="Update Preference" Value="UpdatePreference" Selected="true" />
                             <asp:ListItem Text="Append to preference" Value="AppendToPreference" />
                         </Rock:RockRadioButtonList>
-                        
+
                         <Rock:NotificationBox ID="nbGroupScheduleAssignmentUpdatePreferenceInformation" runat="server" NotificationBoxType="Info" Visible="false" CssClass="margin-t-md" />
                     </Content>
                 </Rock:ModalDialog>

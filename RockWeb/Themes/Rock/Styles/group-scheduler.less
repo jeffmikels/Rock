@@ -18,6 +18,14 @@
 @belowdesired-icon-color: fade(@brand-warning, 75%);
 @belowminimum-icon-color: fade(@brand-danger, 75%);
 
+
+.panel-body-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 200px;
+    height: calc(100vh - 290px);
+}
+
 .group-scheduler {
   // Duplicated Style for Embedding in External Themes
   .panel.panel-block {
@@ -254,11 +262,8 @@
 
 .panel-groupscheduler .resource-area {
   height: 100%;
-  //padding-top: 15px;
-  //padding-bottom: 15px;
 
   > .row {
-      //padding-left: 0px;
       height: 100%;
   }
 }
@@ -276,8 +281,6 @@
 }
 
 .panel-groupscheduler .occurrence-filter-options {
-  //margin-left: -15px;
-  //margin-bottom: 15px;
   margin-bottom: 15px;
   background-color: magenta;
 }
@@ -566,7 +569,7 @@
 
 .scheduler-target-container .resource.gu-transit,
 .resource.gu-mirror {
-  max-height: 38px;
+  max-width: 270px;
 
   .hide-transit {
     display: none;
@@ -577,8 +580,11 @@
   background: rgba(255,255,255,.8);
   box-shadow: 0 5px 20px 0 rgba(21,27,38,.08);
   opacity: 1;
-}
 
+  .flex::before {
+    display: none;;
+  }
+}
 
 // TEMP
 
@@ -617,9 +623,6 @@ background: #E9ECEE;
 outline: 0;
 box-shadow: none;
 }
-
-//,
-//.panel-toolbar .picker .fa-caret-down
 
 .panel-toolbar .picker .picker-select-none {
   display: none !important;
@@ -669,7 +672,7 @@ box-shadow: none;
 }
 .board-cards {
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding: 1px 16px 64px;
 }
 .board-card {
