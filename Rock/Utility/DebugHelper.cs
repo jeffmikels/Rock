@@ -14,7 +14,6 @@
 // limitations under the License.
 // </copyright>
 //
-using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.Entity.Infrastructure.Interception;
@@ -43,8 +42,10 @@ namespace Rock
         public static double _callMSTotal = 0.00;
 
         /// <summary>
-        /// 
+        /// Just output timings, don't include the SQL or Stack trace
         /// </summary>
+        public static bool TimingsOnly = false;
+
         private class DebugHelperUserState
         {
             public int CallNumber { get; set; }
@@ -210,7 +211,10 @@ namespace Rock
 
                 sbDebug.AppendLine( "\nEND\nGO\n\n" );
 
-                DebugOutputWrite( sbDebug.ToString() );
+                if ( !TimingsOnly )
+                {
+                    System.Diagnostics.Debug.Write( sbDebug.ToString() );
+                }
 
                 var sqlConnection = command.Connection as System.Data.SqlClient.SqlConnection;
 
@@ -242,7 +246,7 @@ namespace Rock
                     sqlConnection.StatisticsEnabled = false;
                     var commandExecutionTimeInMs = ( long ) stats["ExecutionTime"];
 
-                    DebugOutputWrite( $"\n/* Call# {debugHelperUserState.CallNumber}: ElapsedTime [{debugHelperUserState.Stopwatch.Elapsed.TotalMilliseconds}ms], SQLConnection.Statistics['ExecutionTime'] = [{commandExecutionTimeInMs}ms] */\n" );
+                    System.Diagnostics.Debug.Write( $"\n/* Call# {debugHelperUserState.CallNumber}: ElapsedTime [{debugHelperUserState.Stopwatch.Elapsed.TotalMilliseconds}ms], SQLConnection.Statistics['ExecutionTime'] = [{commandExecutionTimeInMs}ms] */\n" );
                     _callMSTotal += debugHelperUserState.Stopwatch.Elapsed.TotalMilliseconds;
                 }
             }
@@ -292,16 +296,6 @@ namespace Rock
             DbInterception.Add( _debugLoggingDbCommandInterceptor );
         }
 
-        private static void DebugOutputWrite( string message )
-        {
-            Debug.Write( message );
-        }
-
-        private static void DebugOutputWriteLine (string message)
-        {
-            DebugOutputWrite( message + Environment.NewLine );
-        }
-
         /// <summary>
         /// Stops logging all EF SQL Calls to the Debug Output Window
         /// </summary>
@@ -309,7 +303,7 @@ namespace Rock
         {
             if ( _callCounts != 0 )
             {
-                DebugOutputWriteLine( $" /* ####SQLLogging Summary: _callCounts:{_callCounts}, _callMSTotal:{_callMSTotal}, _callMSTotal/_callCounts:{_callMSTotal / _callCounts}#### */" );
+                Debug.WriteLine( $"/* ####SQLLogging Summary: _callCounts:{_callCounts}, _callMSTotal:{_callMSTotal}, _callMSTotal/_callCounts:{_callMSTotal / _callCounts}#### */" );
             }
 
             DbInterception.Remove( _debugLoggingDbCommandInterceptor );
