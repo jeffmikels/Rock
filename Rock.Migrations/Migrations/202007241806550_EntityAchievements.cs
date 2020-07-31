@@ -123,18 +123,25 @@ $@"INSERT INTO AttributeValue (
 	EntityId,
 	Value,
 	Guid,
-	CreatedDateTime
+	CreatedDateTime,
+	ForeignKey,
+	IsSystem
 ) SELECT
 	a.Id,
 	at.Id,
 	st.Guid,
 	NEWID(),
-	GETDATE()
+	GETDATE(),
+	'Migrated from streak attempts',
+	0
 FROM
 	AchievementType at
 	JOIN StreakType st ON st.Id = at.StreakTypeId
 	JOIN EntityType et ON et.Id = at.ComponentEntityTypeId
-	JOIN Attribute a ON a.EntityTypeId = et.Id AND a.[Key] = 'StreakType'" );
+	JOIN Attribute a ON 
+		a.EntityTypeQualifierColumn = 'ComponentEntityTypeId' 
+		AND a.[Key] = 'StreakType'
+		AND a.EntityTypeQualifierValue = at.ComponentEntityTypeId" );
 
             DropColumn( "dbo.AchievementType", "StreakTypeId" );
         }
