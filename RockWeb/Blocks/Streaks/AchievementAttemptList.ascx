@@ -1,14 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="AchievementAttemptList.ascx.cs" Inherits="RockWeb.Blocks.Streaks.AchievementAttemptList" %>
 
-<script type="text/javascript">
-    Sys.Application.add_load(function () {
-        $('.js-member-note').tooltip();
-
-        // data view sync list popover
-        $('.js-sync-popover').popover();
-    });
-</script>
-
 <asp:UpdatePanel ID="upMain" runat="server">
     <ContentTemplate>
 

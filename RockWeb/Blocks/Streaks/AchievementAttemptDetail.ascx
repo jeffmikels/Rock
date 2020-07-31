@@ -1,14 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="AchievementAttemptDetail.ascx.cs" Inherits="RockWeb.Blocks.Streaks.AchievementAttemptDetail" %>
 
-<script type="text/javascript">
-    Sys.Application.add_load(function () {
-        $('.js-member-note').tooltip();
-
-        // data view sync list popover
-        $('.js-sync-popover').popover();
-    });
-</script>
-
 <asp:UpdatePanel ID="upAttemptDetail" runat="server">
     <ContentTemplate>
         <asp:HiddenField ID="hfIsEditMode" runat="server" />

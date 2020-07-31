@@ -92,6 +92,51 @@ WHERE
 
             RockMigrationHelper.UpdateEntityType( "Rock.Model.Interaction", SystemGuid.EntityType.INTERACTION, true, true );
             Sql( $"UPDATE [EntityType] SET [IsAchievementsEnabled] = 1 WHERE [Guid] = '{ SystemGuid.EntityType.INTERACTION }';" );
+
+            RockMigrationHelper.AddEntityAttribute( 
+                "Rock.Model.AchievementType", 
+                "F1411F4A-BD4B-4F80-9A83-94026C009F4D", 
+                "ComponentEntityTypeId",
+                "' + (SELECT Id FROM EntityType WHERE Guid = '174F0AFF-3A5E-4A20-AE8B-D8D83D43BACD') + '",
+                "Streak Type",
+                string.Empty,
+                "The source streak type from which achievements are earned.",
+                4,
+                string.Empty,
+                "E926DAAE-980A-4BEE-9CF8-C3BF52F28D9D" );
+
+            RockMigrationHelper.AddEntityAttribute(
+                "Rock.Model.AchievementType",
+                "F1411F4A-BD4B-4F80-9A83-94026C009F4D",
+                "ComponentEntityTypeId",
+                "' + (SELECT Id FROM EntityType WHERE Guid = '05D8CD17-E07D-4927-B9C4-5018F7C4B715') + '",
+                "Streak Type",
+                string.Empty,
+                "The source streak type from which achievements are earned.",
+                4,
+                string.Empty,
+                "BEDD14D0-450E-475C-8D9F-404DDE350530" );
+
+            Sql(
+$@"INSERT INTO AttributeValue (
+	AttributeId,
+	EntityId,
+	Value,
+	Guid,
+	CreatedDateTime
+) SELECT
+	a.Id,
+	at.Id,
+	st.Guid,
+	NEWID(),
+	GETDATE()
+FROM
+	AchievementType at
+	JOIN StreakType st ON st.Id = at.StreakTypeId
+	JOIN EntityType et ON et.Id = at.ComponentEntityTypeId
+	JOIN Attribute a ON a.EntityTypeId = et.Id AND a.[Key] = 'StreakType'" );
+
+            DropColumn( "dbo.AchievementType", "StreakTypeId" );
         }
 
         private void EntityTypeChangesUp()
@@ -99,6 +144,9 @@ WHERE
             RenameEntity( SystemGuid.EntityType.ACHIEVEMENT_ATTEMPT, "Rock.Model.StreakAchievementAttempt", "Rock.Model.AchievementAttempt", "Achievement Attempt" );
             RenameEntity( SystemGuid.EntityType.ACHIEVEMENT_TYPE, "Rock.Model.StreakTypeAchievementType", "Rock.Model.AchievementType", "Achievement Type" );
             RenameEntity( SystemGuid.EntityType.ACHIEVEMENT_TYPE_PREREQUISITE, "Rock.Model.StreakTypeAchievementTypePrerequisite", "Rock.Model.AchievementTypePrerequisite", "Achievement Type Prerequisite" );
+
+            RockMigrationHelper.UpdateEntityType( "Rock.Achievement.Component.AccumulativeAchievement", "05D8CD17-E07D-4927-B9C4-5018F7C4B715", false, true );
+            RockMigrationHelper.UpdateEntityType( "Rock.Achievement.Component.StreakAchievement", "174F0AFF-3A5E-4A20-AE8B-D8D83D43BACD", false, true );
         }
 
         private void EntityTypeChangesDown()
@@ -138,7 +186,6 @@ WHERE
             RenameColumn( table: "dbo.AchievementAttempt", name: "StreakId", newName: "AchieverEntityId" );
 
             AddColumn( "dbo.AchievementType", "ComponentConfigJson", c => c.String() );
-            DropColumn( "dbo.StreakTypeAchievementType", "StreakTypeId" );
         }
 
         private void TableChangesDown()
