@@ -64,8 +64,7 @@ namespace Rock.Migrations
 @"UPDATE [AchievementType]
 SET
     [SourceEntityTypeId] = (SELECT [Id] FROM [EntityType] WHERE [Name] = 'Rock.Model.Streak'),
-    [AchieverEntityTypeId] = (SELECT [Id] FROM [EntityType] WHERE [Name] = 'Rock.Model.PersonAlias'),
-    [SourceEntityQualifierColumn] = 'StreakTypeId'" );
+    [AchieverEntityTypeId] = (SELECT [Id] FROM [EntityType] WHERE [Name] = 'Rock.Model.PersonAlias')" );
 
             // Transform the streak id value stored in AchieverEntityId (because of field rename) to a person alias id value
             Sql(
@@ -121,8 +120,6 @@ WHERE
             RenameColumn( table: "dbo.StreakTypeAchievementTypePrerequisite", name: "PrerequisiteStreakTypeAchievementTypeId", newName: "PrerequisiteAchievementTypeId" );
             RenameColumn( table: "dbo.StreakTypeAchievementTypePrerequisite", name: "StreakTypeAchievementTypeId", newName: "AchievementTypeId" );
             RenameColumn( table: "dbo.StreakAchievementAttempt", name: "StreakTypeAchievementTypeId", newName: "AchievementTypeId" );
-            RenameColumn( table: "dbo.AchievementType", name: "StreakTypeId", newName: "SourceEntityQualifierValue" );
-            AlterColumn( table: "dbo.AchievementType", name: "SourceEntityQualifierValue", c => c.String() );
             RenameIndex( table: "dbo.StreakAchievementAttempt", name: "IX_StreakTypeAchievementTypeId", newName: "IX_AchievementTypeId" );
             RenameIndex( table: "dbo.StreakTypeAchievementTypePrerequisite", name: "IX_StreakTypeAchievementTypeId", newName: "IX_AchievementTypeId" );
             RenameIndex( table: "dbo.StreakTypeAchievementTypePrerequisite", name: "IX_PrerequisiteStreakTypeAchievementTypeId", newName: "IX_PrerequisiteAchievementTypeId" );
@@ -136,16 +133,16 @@ WHERE
             RenameIndex( table: "dbo.AchievementType", name: "IX_AchievementEntityTypeId", newName: "IX_ComponentEntityTypeId" );
             AddColumn( "dbo.AchievementType", "SourceEntityTypeId", c => c.Int() );
             AddColumn( "dbo.AchievementType", "AchieverEntityTypeId", c => c.Int( nullable: false ) );
-            AddColumn( "dbo.AchievementType", "SourceEntityQualifierColumn", c => c.String( maxLength: 50 ) );
             RenameColumn( table: "dbo.AchievementAttempt", name: "StreakId", newName: "AchieverEntityId" );
-            AlterColumn( "dbo.AchievementType", "SourceEntityQualifierValue", c => c.String( maxLength: 200 ) );
+
+            AddColumn( "dbo.AchievementType", "ComponentConfigJson", c => c.String() );
         }
 
         private void TableChangesDown()
         {
-            AlterColumn( "dbo.AchievementType", "SourceEntityQualifierValue", c => c.String() );
+            DropColumn( "dbo.AchievementType", "ComponentConfigJson" );
+
             RenameColumn( table: "dbo.AchievementAttempt", name: "AchieverEntityId", newName: "StreakId" );
-            DropColumn( "dbo.AchievementType", "SourceEntityQualifierColumn" );
             DropColumn( "dbo.AchievementType", "AchieverEntityTypeId" );
             DropColumn( "dbo.AchievementType", "SourceEntityTypeId" );
             RenameIndex( table: "dbo.AchievementType", name: "IX_ComponentEntityTypeId", newName: "IX_AchievementEntityTypeId" );
@@ -155,8 +152,6 @@ WHERE
             RenameTable( name: "dbo.AchievementTypePrerequisite", newName: "StreakTypeAchievementTypePrerequisite" );
             RenameTable( name: "dbo.AchievementAttempt", newName: "StreakAchievementAttempt" );
 
-            AlterColumn( "dbo.AchievementType", "SourceEntityQualifierValue", c => c.Int( nullable: false ) );
-            RenameColumn( "dbo.AchievementType", "SourceEntityQualifierValue", "StreakTypeId" );
             DropColumn( "dbo.EntityType", "IsAchievementsEnabled" );
             RenameIndex( table: "dbo.StreakTypeAchievementTypePrerequisite", name: "IX_PrerequisiteAchievementTypeId", newName: "IX_PrerequisiteStreakTypeAchievementTypeId" );
             RenameIndex( table: "dbo.StreakTypeAchievementTypePrerequisite", name: "IX_AchievementTypeId", newName: "IX_StreakTypeAchievementTypeId" );

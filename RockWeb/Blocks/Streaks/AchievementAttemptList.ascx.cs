@@ -108,8 +108,6 @@ namespace RockWeb.Blocks.Streaks
         #region Private Variables
 
         // Cache these fields since they could get called many times in GridRowDataBound
-        private readonly string _fullNameFieldId = "lExportFullName";
-        private readonly string _nameWithHtmlFieldId = "lNameWithHtml";
         private readonly string _progressFieldId = "lProgress";
 
         #endregion Private Variables
@@ -155,8 +153,6 @@ namespace RockWeb.Blocks.Streaks
         #endregion Base Control Methods
 
         #region Grid
-
-        private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
         /// <summary>
         /// Handles the Delete event of the gAttempts control.
