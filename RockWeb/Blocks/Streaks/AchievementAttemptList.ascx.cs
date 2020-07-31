@@ -72,7 +72,7 @@ namespace RockWeb.Blocks.Streaks
             public const string AchievementTypeId = "AchievementTypeId";
 
             /// <summary>
-            /// The streak achievement attempt identifier
+            /// The achievement attempt identifier
             /// </summary>
             public const string AchievementAttemptId = "AchievementAttemptId";
         }
@@ -121,10 +121,8 @@ namespace RockWeb.Blocks.Streaks
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
-            InitializeScripts();
             InitializeFilter();
             InitializeGrid();
-            IntializeRowButtons();
             InitializeSettingsNotification( upMain );
         }
 
@@ -395,54 +393,6 @@ namespace RockWeb.Blocks.Streaks
         private AchievementTypeService _achievementTypeService = null;
 
         /// <summary>
-        /// Gets the person alias service.
-        /// </summary>
-        /// <returns></returns>
-        private PersonAliasService GetPersonAliasService()
-        {
-            if ( _personAliasService == null )
-            {
-                var rockContext = GetRockContext();
-                _personAliasService = new PersonAliasService( rockContext );
-            }
-
-            return _personAliasService;
-        }
-        private PersonAliasService _personAliasService = null;
-
-        /// <summary>
-        /// Gets the entity type service.
-        /// </summary>
-        /// <returns></returns>
-        private EntityTypeService GetEntityTypeService()
-        {
-            if ( _entityTypeService == null )
-            {
-                var rockContext = GetRockContext();
-                _entityTypeService = new EntityTypeService( rockContext );
-            }
-
-            return _entityTypeService;
-        }
-        private EntityTypeService _entityTypeService = null;
-
-        /// <summary>
-        /// Gets the streak service.
-        /// </summary>
-        /// <returns></returns>
-        private StreakService GetStreakService()
-        {
-            if ( _streakService == null )
-            {
-                var rockContext = GetRockContext();
-                _streakService = new StreakService( rockContext );
-            }
-
-            return _streakService;
-        }
-        private StreakService _streakService = null;
-
-        /// <summary>
         /// Gets the type of the achievement.
         /// </summary>
         /// <returns></returns>
@@ -482,7 +432,7 @@ namespace RockWeb.Blocks.Streaks
                 achievementTypes = achievementTypes.Where( at => at.Id == achievementType.Id );
             }
 
-            _attemptsQuery = Enumerable.Empty<AchieverAttemptItem>().AsQueryable();
+            var subQueries = new List<IQueryable<AchieverAttemptItem>>();
 
             foreach ( var at in achievementTypes )
             {
@@ -494,9 +444,10 @@ namespace RockWeb.Blocks.Streaks
                 }
 
                 var componentQuery = component.GetAchieverAttemptQuery( at, rockContext ).AsNoTracking();
-                _attemptsQuery = _attemptsQuery.Union( componentQuery );
+                subQueries.Add( componentQuery );
             }
 
+            _attemptsQuery = subQueries.DefaultIfEmpty().Aggregate( ( a, b ) => a.Union( b ) );
             return _attemptsQuery;
         }
         private IQueryable<AchieverAttemptItem> _attemptsQuery = null;
@@ -557,7 +508,6 @@ namespace RockWeb.Blocks.Streaks
         private void InitializeGrid()
         {
             gAttempts.DataKeyNames = new string[] { "Id" };
-            gAttempts.PersonIdField = "Person Id";
             gAttempts.GridRebind += gAttempts_GridRebind;
             gAttempts.Actions.AddClick += gAttempts_Add;
             gAttempts.Actions.ShowAdd = !GetAttributeValue( AttributeKey.DetailPage ).IsNullOrWhiteSpace();
@@ -586,7 +536,6 @@ namespace RockWeb.Blocks.Streaks
         private void Block_BlockUpdated( object sender, EventArgs e )
         {
             BindFilter();
-            IntializeRowButtons();
             BindGrid();
         }
 
@@ -611,63 +560,6 @@ namespace RockWeb.Blocks.Streaks
         }
 
         /// <summary>
-        /// Initialize the row buttons
-        /// </summary>
-        private void IntializeRowButtons()
-        {
-            RemoveRowButtons();
-            AddRowButtons();
-        }
-
-        /// <summary>
-        /// Remove the row buttons
-        /// </summary>
-        private void RemoveRowButtons()
-        {
-            var hyperLink = gAttempts.Columns.OfType<HyperLinkField>().FirstOrDefault( c => c.ItemStyle.CssClass == "grid-columncommand" );
-            if ( hyperLink != null )
-            {
-                gAttempts.Columns.Remove( hyperLink );
-            }
-
-            var buttonColumn = gAttempts.Columns.OfType<LinkButtonField>().FirstOrDefault( c => c.ItemStyle.CssClass == "grid-columncommand" );
-            if ( buttonColumn != null )
-            {
-                gAttempts.Columns.Remove( buttonColumn );
-            }
-        }
-
-        /// <summary>
-        /// Add the row buttons
-        /// </summary>
-        private void AddRowButtons()
-        {
-            // Add Link to Profile Page Column
-            if ( !string.IsNullOrEmpty( GetAttributeValue( "PersonProfilePage" ) ) )
-            {
-                var column = CreatePersonProfileLinkColumn( "PersonId" );
-                gAttempts.Columns.Add( column );
-            }
-        }
-
-        /// <summary>
-        /// Adds the column with a link to profile page.
-        /// </summary>
-        private HyperLinkField CreatePersonProfileLinkColumn( string fieldName )
-        {
-            HyperLinkField hlPersonProfileLink = new HyperLinkField();
-            hlPersonProfileLink.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            hlPersonProfileLink.HeaderStyle.CssClass = "grid-columncommand";
-            hlPersonProfileLink.ItemStyle.CssClass = "grid-columncommand";
-            hlPersonProfileLink.DataNavigateUrlFields = new string[1] { fieldName };
-            hlPersonProfileLink.DataNavigateUrlFormatString = LinkedPageUrl( "PersonProfilePage", new Dictionary<string, string> { { "PersonId", "###" } } ).Replace( "###", "{0}" );
-            hlPersonProfileLink.DataTextFormatString = "<div class='btn btn-default btn-sm'><i class='fa fa-user'></i></div>";
-            hlPersonProfileLink.DataTextField = fieldName;
-
-            return hlPersonProfileLink;
-        }
-
-        /// <summary>
         /// Binds the attempts grid.
         /// </summary>
         protected void BindGrid()
@@ -683,6 +575,7 @@ namespace RockWeb.Blocks.Streaks
                 lHeading.Text = "Achievement Attempts";
             }
 
+            GetRockContext().SqlLogging( true );
             var query = GetAttemptsQuery();
 
             // Filter by Achiever Name
@@ -761,15 +654,6 @@ namespace RockWeb.Blocks.Streaks
 
             gAttempts.SetLinqDataSource( viewModelQuery );
             gAttempts.DataBind();
-        }
-
-        /// <summary>
-        /// Add JavaScript to the page
-        /// </summary>
-        private void InitializeScripts()
-        {
-            /// add lazyload so that person-link-popover javascript works
-            RockPage.AddScriptLink( "~/Scripts/jquery.lazyload.min.js" );
         }
 
         #endregion

@@ -99,9 +99,6 @@ namespace RockWeb.Blocks.Streaks
 
             InitializeActionButtons();
             InitializeSettingsNotification();
-
-            // Add lazyload so that person-link-popover javascript works
-            RockPage.AddScriptLink( "~/Scripts/jquery.lazyload.min.js" );
         }
 
         /// <summary>
@@ -466,7 +463,7 @@ namespace RockWeb.Blocks.Streaks
         }
 
         /// <summary>
-        /// Shows the mode where the user can edit an existing streak type
+        /// Shows the mode where the user can edit an existing item
         /// </summary>
         private void ShowEditMode()
         {
@@ -491,7 +488,7 @@ namespace RockWeb.Blocks.Streaks
         }
 
         /// <summary>
-        /// Show the mode where a user can add a new streak type
+        /// Show the mode where a user can add a new item
         /// </summary>
         private void ShowAddMode()
         {
@@ -511,7 +508,7 @@ namespace RockWeb.Blocks.Streaks
         }
 
         /// <summary>
-        /// Shows the mode where the user is only viewing an existing streak type
+        /// Shows the mode where the user is only viewing an existing item
         /// </summary>
         private void ShowViewMode()
         {
@@ -769,38 +766,6 @@ namespace RockWeb.Blocks.Streaks
         private IEntity _achiever = null;
 
         /// <summary>
-        /// Get the streak type service
-        /// </summary>
-        /// <returns></returns>
-        private StreakTypeService GetStreakTypeService()
-        {
-            if ( _streakTypeService == null )
-            {
-                var rockContext = GetRockContext();
-                _streakTypeService = new StreakTypeService( rockContext );
-            }
-
-            return _streakTypeService;
-        }
-        private StreakTypeService _streakTypeService = null;
-
-        /// <summary>
-        /// Get the person alias service
-        /// </summary>
-        /// <returns></returns>
-        private PersonAliasService GetPersonAliasService()
-        {
-            if ( _personAliasService == null )
-            {
-                var rockContext = GetRockContext();
-                _personAliasService = new PersonAliasService( rockContext );
-            }
-
-            return _personAliasService;
-        }
-        private PersonAliasService _personAliasService = null;
-
-        /// <summary>
         /// Get the entity type service
         /// </summary>
         /// <returns></returns>
@@ -815,38 +780,6 @@ namespace RockWeb.Blocks.Streaks
             return _entityTypeService;
         }
         private EntityTypeService _entityTypeService = null;
-
-        /// <summary>
-        /// Get the person service
-        /// </summary>
-        /// <returns></returns>
-        private PersonService GetPersonService()
-        {
-            if ( _personService == null )
-            {
-                var rockContext = GetRockContext();
-                _personService = new PersonService( rockContext );
-            }
-
-            return _personService;
-        }
-        private PersonService _personService = null;
-
-        /// <summary>
-        /// Get the streak service
-        /// </summary>
-        /// <returns></returns>
-        private StreakService GetStreakService()
-        {
-            if ( _streakService == null )
-            {
-                var rockContext = GetRockContext();
-                _streakService = new StreakService( rockContext );
-            }
-
-            return _streakService;
-        }
-        private StreakService _streakService = null;
 
         /// <summary>
         /// Gets the attempt service.

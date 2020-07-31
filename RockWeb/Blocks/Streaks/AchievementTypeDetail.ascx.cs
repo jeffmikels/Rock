@@ -668,6 +668,7 @@ namespace RockWeb.Blocks.Streaks
             var component = updatedCacheItem.AchievementComponent;
             var configDictionary = component.GenerateConfigFromAttributeValues( updatedCacheItem );
             achievementType.ComponentConfigJson = configDictionary.ToJson();
+            rockContext.SaveChanges();
 
             // If the save was successful, reload the page using the new record Id.
             NavigateToPage( RockPage.Guid, new Dictionary<string, string> {

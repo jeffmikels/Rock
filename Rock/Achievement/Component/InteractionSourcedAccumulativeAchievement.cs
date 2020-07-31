@@ -237,7 +237,7 @@ namespace Rock.Achievement.Component
                     {
                         AchievementAttempt = aa,
                         Achiever = pa,
-                        AchieverName = $"{pa.Person.NickName} {pa.Person.LastName}"
+                        AchieverName = pa.Person.NickName + " " + pa.Person.LastName
                     } );
         }
 
