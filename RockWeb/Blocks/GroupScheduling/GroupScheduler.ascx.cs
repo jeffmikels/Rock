@@ -27,6 +27,7 @@ using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
+using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -70,11 +71,16 @@ namespace RockWeb.Blocks.GroupScheduling
             public const string GroupId = "GroupId";
             public const string GroupIds = "GroupIds";
             public const string ShowChildGroups = "ShowChildGroups";
+
             public const string SundayDate = "SundayDate";
+
             public const string SelectAllSchedules = "SelectAllSchedules";
             public const string ScheduleId = "ScheduleId";
+
+            // support either LocationId or LocationIds as a parameter
             public const string LocationId = "LocationId";
             public const string LocationIds = "LocationIds";
+
             public const string ResourceListSourceType = "ResourceListSourceType";
             public const string GroupMemberFilterType = "GroupMemberFilterType";
             public const string AlternateGroupId = "AlternateGroupId";
@@ -85,25 +91,31 @@ namespace RockWeb.Blocks.GroupScheduling
 
         #region UserPreferenceKeys
 
+        /// <summary>
+        /// These end up with the same values as PageParameterKey values, but with different names for clarity
+        /// </summary>
         private static class UserPreferenceKey
         {
             // the selected group Id (the active group column)
-            public const string SelectedGroupId = "SelectedGroupId";
+            public const string SelectedGroupId = PageParameterKey.GroupId;
 
             // the GroupIds that are selected in the GroupPicker
-            public const string PickerGroupIds = "PickerGroupIds";
+            public const string PickerGroupIds = PageParameterKey.GroupIds;
 
             // the value of the ShowChildGroups checkbox
-            public const string ShowChildGroups = "ShowChildGroups";
+            public const string ShowChildGroups = PageParameterKey.ShowChildGroups;
 
-            public const string SelectedDate = "SelectedDate";
-            public const string SelectAllSchedules = "SelectAllSchedules";
-            public const string SelectedIndividualScheduleId = "SelectedIndividualScheduleId";
-            public const string SelectedLocationIds = "SelectedLocationIds";
-            public const string SelectedResourceListSourceType = "SelectedResourceListSourceType";
-            public const string GroupMemberFilterType = "GroupMemberFilterType";
-            public const string AlternateGroupId = "AlternateGroupId";
-            public const string DataViewId = "DataViewId";
+            public const string SelectedDate = PageParameterKey.SundayDate;
+
+            public const string SelectAllSchedules = PageParameterKey.SelectAllSchedules;
+            public const string SelectedIndividualScheduleId = PageParameterKey.ScheduleId;
+
+            public const string SelectedLocationIds = PageParameterKey.LocationIds;
+
+            public const string SelectedResourceListSourceType = PageParameterKey.ResourceListSourceType;
+            public const string GroupMemberFilterType = PageParameterKey.GroupMemberFilterType;
+            public const string AlternateGroupId = PageParameterKey.AlternateGroupId;
+            public const string DataViewId = PageParameterKey.DataViewId;
         }
 
         #endregion UserPreferenceKeys
@@ -788,14 +800,20 @@ btnCopyToClipboard.ClientID );
             }
 
             // Create URL for selected settings
-            var pageReference = CurrentPageReference;
-            foreach ( var setting in GetBlockUserPreferences() )
+            // Set the pageparameters from UserPreferences since they end up with the same values
+
+            // create a new pageReference using the CurrentPageReference values so that we don't end up modifying CurrentPageReference
+            var pageReference = new PageReference( CurrentPageReference );
+            var pagePageParameterKeys = typeof( PageParameterKey ).GetFields().Select( a => a.Name ).ToList();
+
+            foreach ( var pagePageParameterKey in pagePageParameterKeys )
             {
-                pageReference.Parameters.AddOrReplace( setting.Key, setting.Value );
+                pageReference.Parameters.AddOrReplace( pagePageParameterKey, this.GetBlockUserPreference( pagePageParameterKey ) );
             }
 
-            Uri uri = new Uri( Request.Url.ToString() );
-            btnCopyToClipboard.Attributes["data-clipboard-text"] = uri.GetLeftPart( UriPartial.Authority ) + pageReference.BuildUrl();
+            Uri requestUri = new Uri( Request.Url.ToString() );
+            var linkUrl = requestUri.GetLeftPart( UriPartial.Authority ) + pageReference.BuildUrl();
+            btnCopyToClipboard.Attributes["data-clipboard-text"] = linkUrl;
             btnCopyToClipboard.Disabled = false;
         }
 

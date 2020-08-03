@@ -109,6 +109,7 @@ namespace Rock.Web.UI
 
         /// <summary>
         /// Gets the current page reference.
+        /// NOTE: Create a copy of this using <see cref="PageReference.PageReference(PageReference)">new PageReference.PageReference( CurrentPageReference )</see> to prevent modifying this instance.
         /// </summary>
         public PageReference CurrentPageReference
         {
