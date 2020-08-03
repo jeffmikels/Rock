@@ -34,11 +34,15 @@ namespace Rock.Oidc
     /// <seealso cref="OpenIdConnectServerProvider" />
     public class AuthorizationProvider : OpenIdConnectServerProvider
     {
+        /// <summary>
+        /// Represents an event called for each validated token request
+        /// to allow the user code to decide how the request should be handled.
+        /// </summary>
+        /// <param name="context">The context instance associated with this event.</param>
         public override async Task HandleTokenRequest( HandleTokenRequestContext context )
         {
             var rockContext = new RockContext();
             var userLoginService = new UserLoginService( rockContext );
-
 
             // Only handle grant_type=password requests and let ASOS
             // process grant_type=refresh_token requests automatically.
@@ -105,21 +109,25 @@ namespace Rock.Oidc
                         OpenIdConnectServerDefaults.AuthenticationType,
                         OpenIdConnectConstants.Claims.Name,
                         OpenIdConnectConstants.Claims.Role );
+
                 // Note: the subject claim is always included in both identity and
                 // access tokens, even if an explicit destination is not specified.
+                identity.AddClaim(
+                   new Claim( OpenIdConnectConstants.Claims.Subject, user.UserName )
+                        .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                        OpenIdConnectConstants.Destinations.IdentityToken ) );
 
                 identity.AddClaim(
-               new Claim( OpenIdConnectConstants.Claims.Subject, user.UserName )
-                   .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                    OpenIdConnectConstants.Destinations.IdentityToken ) );
-
+                new Claim( OpenIdConnectConstants.Claims.Username, user.UserName )
+                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
 
                 // When adding custom claims, you MUST specify one or more destinations.
                 // Read "part 7" for more information about custom claims and scopes.
                 identity.AddClaim(
-                new Claim( OpenIdConnectConstants.Claims.Name, user.Person.FullName )
-                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
+                    new Claim( OpenIdConnectConstants.Claims.Name, user.Person.FullName )
+                        .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                            OpenIdConnectConstants.Destinations.IdentityToken ) );
 
                 // Create a new authentication ticket holding the user identity.
                 var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );
@@ -128,12 +136,31 @@ namespace Rock.Oidc
                 ticket.SetScopes(
                     /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
                     /* email: */ OpenIdConnectConstants.Scopes.Email,
-                    /* profile: */ OpenIdConnectConstants.Scopes.Profile );
+                    /* profile: */ OpenIdConnectConstants.Scopes.Profile,
+                    OpenIdConnectConstants.Scopes.Phone,
+                    OpenIdConnectConstants.Scopes.Address,
+                    OpenIdConnectConstants.Scopes.OfflineAccess);
 
                 // Set the resource servers the access token should be issued for.
                 ticket.SetResources( "resource_server" );
                 context.Validate( ticket );
 
+            }
+
+            if ( context.Request.IsClientCredentialsGrantType() )
+            {
+                // We don't need to validate the client id here because it was already validated in the ValidateTokenRequest method.
+                var identity = new ClaimsIdentity( OpenIdConnectServerDefaults.AuthenticationType );
+
+                identity.AddClaim( OpenIdConnectConstants.Claims.Subject, context.Request.ClientId,
+                    OpenIdConnectConstants.Destinations.AccessToken );
+
+                // Create a new authentication ticket holding the user identity.
+                var ticket = new AuthenticationTicket(
+                    identity,
+                    new AuthenticationProperties() );
+
+                context.Validate( ticket );
             }
         }
 

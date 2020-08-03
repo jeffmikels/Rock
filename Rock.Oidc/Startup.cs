@@ -13,13 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
-//
 
-using Microsoft.AspNetCore.DataProtection;
+using System;
+using System.IdentityModel.Tokens;
+using System.Reflection;
+using System.Security.Cryptography;
 using Microsoft.Owin;
-using Microsoft.Owin.Security;
-using Microsoft.Owin.Security.DataProtection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Owin;
+using Rock.Data;
+using Rock.Model;
+using Rock.Web;
+using Rock.Web.Cache;
 
 namespace Rock.Oidc
 {
@@ -31,61 +37,137 @@ namespace Rock.Oidc
         /// <param name="app"></param>
         public static void OnStartup( IAppBuilder app )
         {
+            var attribute = GlobalAttributesCache.Value( "OpenIdConnectKey" );
+            var cert = new BinaryFileService( new RockContext() ).Get( attribute.AsGuid() );
+            _ = cert.ContentStream;
+
             app.UseOAuthValidation();
 
             app.UseOpenIdConnectServer( options =>
             {
                 options.Provider = new AuthorizationProvider();
+                // TODO: Should be setting.
+                options.Issuer = new Uri( "https://mattrock.ngrok.io" );
 
-                // Enable the authorization, logout, token and userinfo endpoints.
+                // TODO: Should be settings.
                 options.AuthorizationEndpointPath = new PathString( Paths.AuthorizePath );
                 options.LogoutEndpointPath = new PathString( Paths.LogoutPath );
                 options.TokenEndpointPath = new PathString( Paths.TokenPath );
                 options.UserinfoEndpointPath = new PathString( Paths.UserInfo );
 
-                // Note: see AuthorizationModule.cs for more
-                // information concerning ApplicationCanDisplayErrors.
-                options.ApplicationCanDisplayErrors = true;
-                options.AllowInsecureHttp = true;
+                options.ApplicationCanDisplayErrors = System.Web.Hosting.HostingEnvironment.IsDevelopmentEnvironment;
+                options.AllowInsecureHttp = System.Web.Hosting.HostingEnvironment.IsDevelopmentEnvironment;
 
-                // Register a new ephemeral key, that is discarded when the application
-                // shuts down. Tokens signed using this key are automatically invalidated.
-                // This method should only be used during development.
-                // TODO: Try using the unique Rock encryption key
-                // Maybe something like: options.SigningCredentials.AddCertificate("7D2A741FE34CC2C7369237A5F2078988E17A6A75");
-                options.SigningCredentials.AddEphemeralKey();
+                // TODO: This should be abstracted out to a class and should be rotated based on the longest expiration token.
+                var jsonParameters = SystemSettings.GetValue( "OpenIdConnectRsaKey1" );
+                SerializedRsaKey parameters = null;
+                if ( !string.IsNullOrWhiteSpace( jsonParameters ) )
+                {
+                    parameters = JsonConvert.DeserializeObject<SerializedRsaKey>(
+                        SystemSettings.GetValue( "OpenIdConnectRsaKey1" )
+                        , new JsonSerializerSettings { ContractResolver = new RsaKeyContractResolver() } );
+                }
+                RSA rsa = null;
+                if ( parameters != null && parameters.Parameters.Modulus != null )
+                {
+                    rsa = GenerateRsaKey( 2048, parameters.Parameters );
+                }
+                else
+                {
+                    rsa = GenerateRsaKey( 2048 );
+                    parameters = new SerializedRsaKey
+                    {
+                        Parameters = rsa.ExportParameters( true )
+                    };
+                    SystemSettings.SetValue( "OpenIdConnectRsaKey1"
+                        , JsonConvert.SerializeObject(
+                            parameters
+                            , new JsonSerializerSettings { ContractResolver = new RsaKeyContractResolver() } ) );
+                }
 
-                // Note: to override the default access token format and use JWT, assign AccessTokenHandler:
-                //
-                //options.AccessTokenHandler = new JwtSecurityTokenHandler
-                
-                // Note: when using JWT as the access token format, you have to register a signing key.
-                //
-                // You can register a new ephemeral key, that is discarded when the application shuts down.
-                // Tokens signed using this key are automatically invalidated and thus this method
-                // should only be used during development:
-                //
-                // options.SigningCredentials.AddEphemeralKey();
-                //
-                // On production, using a X.509 certificate stored in the machine store is recommended.
-                // You can generate a self-signed certificate using Pluralsight's self-cert utility:
-                // https://s3.amazonaws.com/pluralsight-free/keith-brown/samples/SelfCert.zip
-                //
-                // options.SigningCredentials.AddCertificate("7D2A741FE34CC2C7369237A5F2078988E17A6A75");
-                //
-                // Alternatively, you can also store the certificate as an embedded .pfx resource
-                // directly in this assembly or in a file published alongside this project:
-                //
-                // options.SigningCredentials.AddCertificate(
-                //     assembly: typeof(Startup).GetTypeInfo().Assembly,
-                //     resource: "Nancy.Server.Certificate.pfx",
-                //     password: "Owin.Security.OpenIdConnect.Server");
+                if ( rsa == null )
+                {
+                    throw new ArgumentException( "The system failed to create the required RSA key failed to create." );
+                }
 
-                // Register the logging listeners used by the OpenID Connect server middleware.
-                // options.UseLogging( logger => logger.AddConsole().AddDebug() );
+                var key = new RsaSecurityKey( rsa );
+                options.SigningCredentials.AddKey( key );
             } );
+        }
 
-            
+        // used for serialization to temporary RSA key
+        private class SerializedRsaKey
+        {
+            public string KeyId { get; set; } = System.Guid.NewGuid().ToString();
+            public DateTime KeyCreatedDate { get; set; } = DateTime.Now;
+            public RSAParameters Parameters { get; set; }
+        }
+
+        private static RSA GenerateRsaKey( int size )
+        {
+            // Note: a 1024-bit key might be returned by RSA.Create() on .NET Desktop/Mono,
+            // where RSACryptoServiceProvider is still the default implementation and
+            // where custom implementations can be registered via CryptoConfig.
+            // To ensure the key size is always acceptable, replace it if necessary.
+            var rsa = RSA.Create();
+
+            if ( rsa.KeySize < size )
+            {
+                rsa.KeySize = size;
+            }
+
+            if ( rsa.KeySize < size && rsa is RSACryptoServiceProvider )
+            {
+                rsa.Dispose();
+                rsa = new RSACryptoServiceProvider( size );
+            }
+
+            if ( rsa.KeySize < size )
+            {
+                throw new InvalidOperationException( "The RSA key generation failed." );
+            }
+
+            return rsa;
+        }
+
+        private static RSA GenerateRsaKey( int size, RSAParameters parameters )
+        {
+            // Note: a 1024-bit key might be returned by RSA.Create() on .NET Desktop/Mono,
+            // where RSACryptoServiceProvider is still the default implementation and
+            // where custom implementations can be registered via CryptoConfig.
+            // To ensure the key size is always acceptable, replace it if necessary.
+            var rsa = RSA.Create();
+
+            if ( rsa.KeySize < size )
+            {
+                rsa.KeySize = size;
+            }
+
+            if ( rsa.KeySize < size && rsa is RSACryptoServiceProvider )
+            {
+                rsa.Dispose();
+                rsa = new RSACryptoServiceProvider( size );
+                rsa.ImportParameters( parameters );
+            }
+
+            if ( rsa.KeySize < size )
+            {
+                throw new InvalidOperationException( "The RSA key generation failed." );
+            }
+
+            return rsa;
+        }
+
+        public class RsaKeyContractResolver : DefaultContractResolver
+        {
+            protected override JsonProperty CreateProperty( MemberInfo member, MemberSerialization memberSerialization )
+            {
+                var property = base.CreateProperty( member, memberSerialization );
+
+                property.Ignored = false;
+
+                return property;
+            }
         }
     }
 }

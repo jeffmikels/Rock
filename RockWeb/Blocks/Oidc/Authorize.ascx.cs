@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
-//
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,7 +25,6 @@ using System.Web;
 using AspNet.Security.OpenIdConnect.Primitives;
 using AspNet.Security.OpenIdConnect.Server;
 using Microsoft.Owin.Security;
-using OpenXmlPowerTools;
 using Owin;
 using Owin.Security.OpenIdConnect.Extensions;
 using Rock;
@@ -111,51 +110,51 @@ namespace RockWeb.Blocks.Oidc
 
         private string CreateAntiForgeryToken()
         {
-            
-                //Generate a new Anti-XSRF token
-                _antiXsrfTokenValue = Guid.NewGuid().ToString( "N" );
 
-                //Set the view state user key, which will be validated by the
-                //framework during each request
-                //Page.ViewStateUserKey = _antiXsrfTokenValue;
+            //Generate a new Anti-XSRF token
+            _antiXsrfTokenValue = Guid.NewGuid().ToString( "N" );
 
-                //Create the non-persistent CSRF cookie
-                var responseCookie = new HttpCookie( AntiXsrfTokenKey )
-                {
-                    //Set the HttpOnly property to prevent the cookie from
-                    //being accessed by client side script
-                    HttpOnly = true,
+            //Set the view state user key, which will be validated by the
+            //framework during each request
+            //Page.ViewStateUserKey = _antiXsrfTokenValue;
 
-                    //Add the Anti-XSRF token to the cookie value
-                    Value = _antiXsrfTokenValue
-                };
+            //Create the non-persistent CSRF cookie
+            var responseCookie = new HttpCookie( AntiXsrfTokenKey )
+            {
+                //Set the HttpOnly property to prevent the cookie from
+                //being accessed by client side script
+                HttpOnly = true,
 
-                //If we are using SSL, the cookie should be set to secure to
-                //prevent it from being sent over HTTP connections
-                // TODO: if ssl secur cookie
-                //if ( FormsAuthentication.RequireSSL &&
-                //Request.IsSecureConnection )
-                //    responseCookie.Secure = true;
+                //Add the Anti-XSRF token to the cookie value
+                Value = _antiXsrfTokenValue
+            };
 
-                //Add the CSRF cookie to the response
-                Response.Cookies.Set( responseCookie );
+            //If we are using SSL, the cookie should be set to secure to
+            //prevent it from being sent over HTTP connections
+            // TODO: if ssl secur cookie
+            //if ( FormsAuthentication.RequireSSL &&
+            //Request.IsSecureConnection )
+            //    responseCookie.Secure = true;
+
+            //Add the CSRF cookie to the response
+            Response.Cookies.Set( responseCookie );
 
             return _antiXsrfTokenValue;
         }
 
-        private bool ValidateAntiForgeryToken(string antiXsrfTokenKey )
+        private bool ValidateAntiForgeryToken( string antiXsrfTokenKey )
         {
             //During the initial page load, add the Anti-XSRF token and user
             GetAntiForgeryToken();
 
             //Validate the Anti-XSRF token
-            if (string.IsNullOrWhiteSpace(antiXsrfTokenKey) || string.IsNullOrWhiteSpace( _antiXsrfTokenValue) || antiXsrfTokenKey != _antiXsrfTokenValue)
+            if ( string.IsNullOrWhiteSpace( antiXsrfTokenKey ) || string.IsNullOrWhiteSpace( _antiXsrfTokenValue ) || antiXsrfTokenKey != _antiXsrfTokenValue )
             {
                 return false;
             }
             return true;
         }
-            
+
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
         /// </summary>
@@ -168,7 +167,7 @@ namespace RockWeb.Blocks.Oidc
             var action = PageParameter( PageParamKey.Action );
             var token = PageParameter( "token" );
 
-            if (!string.IsNullOrWhiteSpace(action) && ValidateAntiForgeryToken( token ) )
+            if ( !string.IsNullOrWhiteSpace( action ) && ValidateAntiForgeryToken( token ) )
             {
                 switch ( action )
                 {
@@ -204,72 +203,6 @@ namespace RockWeb.Blocks.Oidc
             // the user agent to the client application using the appropriate response_mode.
             var owinContext = Context.GetOwinContext();
             owinContext.Authentication.Challenge( OpenIdConnectServerDefaults.AuthenticationScheme );
-        }
-
-        /// <summary>
-        /// Accepts the authorization.
-        /// </summary>
-        private void AcceptAuthorization_prev()
-        {
-            var owinContext = Context.GetOwinContext();
-
-            var response = owinContext.GetOpenIdConnectResponse();
-            if ( response != null )
-            {
-                ShowError( response.ErrorDescription.IsNullOrWhiteSpace() ? "Response is not null" : response.ErrorDescription );
-                return;
-            }
-
-            var request = owinContext.GetOpenIdConnectRequest();
-            if ( request == null )
-            {
-                ShowError( "Request is null" );
-                return;
-            }
-
-            // Note: Owin.Security.OpenIdConnect.Server automatically ensures an application
-            // corresponds to the client_id specified in the authorization request using
-            // IOpenIdConnectServerProvider.ValidateClientRedirectUri (see AuthorizationProvider.cs).
-            // In theory, this null check is thus not strictly necessary. That said, a race condition
-            // and a null reference exception could appear here if you manually removed the application
-            // details from the database after the initial check made by Owin.Security.OpenIdConnect.Server.
-            AuthClient authClient = null;
-            Task.Run( async () => authClient = await GetAuthClient() ).Wait();
-
-            if ( authClient == null )
-            {
-                ShowError( "The auth client was not found" );
-                return;
-            }
-
-            // Create a new ClaimsIdentity containing the claims that
-            // will be used to create an id_token, a token or a code.
-            var identity = new ClaimsIdentity( "Bearer" );
-
-            foreach ( var claim in owinContext.Authentication.User.Claims )
-            {
-                // Allow ClaimTypes.Name to be added in the id_token.
-                // ClaimTypes.NameIdentifier is automatically added, even if its
-                // destination is not defined or doesn't include "id_token".
-                // The other claims won't be visible for the client application.
-                if ( claim.Type == ClaimTypes.Name )
-                {
-                    // TODO
-                    //claim.WithDestination( "id_token" ).WithDestination( "token" );
-                }
-
-                identity.AddClaim( claim );
-            }
-
-            // Create a new ClaimsIdentity containing the claims associated with the application.
-            // Note: setting identity.Actor is not mandatory but can be useful to access
-            // the whole delegation chain from the resource server (see ResourceController.cs).
-            identity.Actor = new ClaimsIdentity( "Bearer" );
-            identity.Actor.AddClaim( ClaimTypes.NameIdentifier, authClient.ClientId );
-            identity.Actor.AddClaim( ClaimTypes.Name, authClient.Name, "id_token token" );
-
-            var manager = Request.GetOwinContext().Authentication;
-            manager.SignIn( identity );
         }
 
         /// <summary>
@@ -369,7 +302,17 @@ namespace RockWeb.Blocks.Oidc
                                      OpenIdConnectConstants.Destinations.IdentityToken ) );
 
             identity.AddClaim(
+                new Claim( OpenIdConnectConstants.Claims.Username, CurrentUser.UserName )
+                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
+
+            identity.AddClaim(
                 new Claim( OpenIdConnectConstants.Claims.Name, CurrentUser.Person.FullName )
+                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
+                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
+
+            identity.AddClaim(
+                new Claim( OpenIdConnectConstants.Claims.Email, CurrentUser.Person.Email )
                     .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
                                      OpenIdConnectConstants.Destinations.IdentityToken ) );
 
@@ -394,7 +337,8 @@ namespace RockWeb.Blocks.Oidc
             ticket.SetScopes( new[] {
                 /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
                 /* email: */ OpenIdConnectConstants.Scopes.Email,
-                /* profile: */ OpenIdConnectConstants.Scopes.Profile
+                /* profile: */ OpenIdConnectConstants.Scopes.Profile,
+                OpenIdConnectConstants.Scopes.OfflineAccess,
             }.Intersect( request.GetScopes() ) );
 
             // Set the resource servers the access token should be issued for.

@@ -15,11 +15,14 @@
 // </copyright>
 //
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Principal;
 using System.ServiceModel.Channels;
 using System.Threading.Tasks;
 using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
+using AspNet.Security.OpenIdConnect.Primitives;
+using Rock.Data;
 using Rock.Model;
 using Rock.Rest.Jwt;
 
@@ -39,6 +42,7 @@ namespace Rock.Rest.Filters
         {
             // See if user is logged in
             var principal = System.Threading.Thread.CurrentPrincipal;
+
             if ( principal != null && principal.Identity != null && !string.IsNullOrWhiteSpace( principal.Identity.Name ) )
             {
                 //var userLoginService = new UserLoginService();
@@ -50,9 +54,41 @@ namespace Rock.Rest.Filters
                 //}
             }
 
+            // If check if ASOS authentication occurred.
+            principal = actionContext.RequestContext.Principal;
+
+            if ( principal != null && principal.Identity != null && !string.IsNullOrWhiteSpace( principal.Identity.Name ) )
+            {
+                var claimIdentity = principal.Identity as ClaimsIdentity;
+                if ( claimIdentity != null )
+                {
+                    var userName = claimIdentity.Claims.FirstOrDefault( c => c.Type == OpenIdConnectConstants.Claims.Username )?.Value;
+                    UserLogin userLogin = null;
+
+                    if ( !string.IsNullOrWhiteSpace( userName ) )
+                    {
+                        using ( var rockContext = new RockContext() )
+                        {
+                            var userLoginService = new UserLoginService( rockContext );
+                            userLogin = userLoginService
+                                            .Queryable()
+                                            .Where( u => u.UserName == userName )
+                                            .FirstOrDefault();
+                        }
+
+                        if ( userLogin != null )
+                        {
+                            var identity = new GenericIdentity( userLogin.UserName );
+                            principal = new GenericPrincipal( identity, null );
+                            actionContext.Request.SetUserPrincipal( principal );
+                            return;
+                        }
+                    }
+                }
+            }
+
             // If not, see if there's a valid token
             TryRetrieveHeader( actionContext, HeaderTokens.AuthorizationToken, out var authToken );
-
             if ( string.IsNullOrWhiteSpace( authToken ) )
             {
                 string queryString = actionContext.Request.RequestUri.Query;
