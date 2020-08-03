@@ -905,7 +905,7 @@ namespace Rock.Model
                 }
             }
 
-            var scheduleOccurrenceDateList = scheduleOccurrenceDateTimeList.Select( a => a.Date ).ToList();
+            var scheduleOccurrenceDateList = scheduleOccurrenceDateTimeList.Select( a => a.Date ).Distinct().ToList();
 
             if ( groupMemberQry != null )
             {
@@ -1128,11 +1128,34 @@ namespace Rock.Model
                 var scheduleIds = schedulerResourceParameters.AttendanceOccurrenceScheduleIds;
 
                 var scheduledAttendanceGroupIdsLookupQuery = attendanceService.Queryable()
-                   .Where( a => ( a.RequestedToAttend == true || a.ScheduledToAttend == true )
-                             && a.Occurrence.ScheduleId.HasValue && scheduleIds.Contains( a.Occurrence.ScheduleId.Value )
-                             && scheduleOccurrenceDateList.Contains( a.Occurrence.OccurrenceDate )
-                             && a.Occurrence.GroupId.HasValue )
-                   .WhereDeducedIsActive();
+                   .Where( a =>
+                   ( a.RequestedToAttend == true || a.ScheduledToAttend == true )
+
+                    && a.Occurrence.GroupId.HasValue
+                    && a.Occurrence.ScheduleId.HasValue )
+                    .WhereDeducedIsActive();
+
+                if ( scheduleIds.Count() == 1 )
+                {
+                    // if there is only 1 schedule, so an equal instead of a contains so that the LINQ expression is a little simplier
+                    var scheduleId = scheduleIds[0];
+                    scheduledAttendanceGroupIdsLookupQuery = scheduledAttendanceGroupIdsLookupQuery.Where( a => a.Occurrence.ScheduleId == scheduleId );
+                }
+                else
+                {
+                    scheduledAttendanceGroupIdsLookupQuery = scheduledAttendanceGroupIdsLookupQuery.Where( a => scheduleIds.Contains( a.Occurrence.ScheduleId.Value ) );
+                }
+
+                if ( scheduleOccurrenceDateList.Count == 1 )
+                {
+                    // if there is only 1 scheduleOccurrenceDate, so an equal instead of a contains so that the LINQ expression is a little simplier
+                    var scheduleOccurrenceDate = scheduleOccurrenceDateList[0];
+                    scheduledAttendanceGroupIdsLookupQuery = scheduledAttendanceGroupIdsLookupQuery.Where( a => a.Occurrence.OccurrenceDate == scheduleOccurrenceDate );
+                }
+                else
+                {
+                    scheduledAttendanceGroupIdsLookupQuery = scheduledAttendanceGroupIdsLookupQuery.Where( a => scheduleOccurrenceDateList.Contains( a.Occurrence.OccurrenceDate ) );
+                }
 
                 /* MP 2020-06-18
                  * Updated query to use an inner join against PersonAlias/Person to improve performance.
@@ -1148,11 +1171,15 @@ namespace Rock.Model
 
                 // load personId/groupId into a list before doing a GroupBy
                 var scheduledAttendancePersonIdGroupIdsQuery = scheduledAttendanceGroupIdsLookupQuery
-                    .Join( personAliasQry, a => a.PersonAliasId, pa => pa.Id, ( a, pa ) => new
-                    {
-                        pa.PersonId,
-                        a.Occurrence.GroupId
-                    } );
+                    .Join(
+                        personAliasQry,
+                        a => a.PersonAliasId,
+                        pa => pa.Id,
+                        ( a, pa ) => new
+                        {
+                            pa.PersonId,
+                            a.Occurrence.GroupId
+                        } );
 
                 var scheduledAttendancePersonIdGroupIdsList = scheduledAttendancePersonIdGroupIdsQuery.ToList();
 
@@ -1216,13 +1243,16 @@ namespace Rock.Model
             // Only count occurrences with active locations and active schedules as conflicting.
             var conflictingScheduledAttendancesQuery = this.Queryable().WhereDeducedIsActive();
 
-            var attendanceOccurrenceInfo = new AttendanceOccurrenceService( this.Context as RockContext ).GetSelect( attendanceOccurrenceId, s => new
-            {
-                s.GroupId,
-                s.Schedule,
-                s.LocationId,
-                s.OccurrenceDate
-            } );
+            var attendanceOccurrenceInfo = new AttendanceOccurrenceService( this.Context as RockContext )
+                .GetSelect(
+                    attendanceOccurrenceId,
+                    s => new
+                    {
+                        s.GroupId,
+                        s.Schedule,
+                        s.LocationId,
+                        s.OccurrenceDate
+                    } );
 
             if ( attendanceOccurrenceInfo == null )
             {
@@ -1257,16 +1287,24 @@ namespace Rock.Model
                 .Where( a => a.OccurrenceId == attendanceOccurrenceId )
                 .Where( a => a.PersonAliasId.HasValue )
                 .Where( a => a.RequestedToAttend == true || a.ScheduledToAttend == true )
-                .Join( personAliasQry, a => a.PersonAliasId, pa => pa.Id, ( a, pa ) => new
-                {
-                    Attendance = a,
-                    PersonId = pa.PersonId
-                } )
-                .Join( personQryForJoin, j1 => j1.PersonId, p => p.Id, ( j1, p ) => new
-                {
-                    Attendance = j1.Attendance,
-                    Person = p
-                } );
+                .Join(
+                    personAliasQry,
+                    a => a.PersonAliasId,
+                    pa => pa.Id,
+                    ( a, pa ) => new
+                    {
+                        Attendance = a,
+                        PersonId = pa.PersonId
+                    } )
+                .Join(
+                    personQryForJoin,
+                    j1 => j1.PersonId,
+                    p => p.Id,
+                    ( j1, p ) => new
+                    {
+                        Attendance = j1.Attendance,
+                        Person = p
+                    } );
 
             var scheduledAttendancesQuery = attendancePersonQuery.Select( ap => new
             {
@@ -1320,12 +1358,14 @@ namespace Rock.Model
             } )
                 .ToList()
                 .GroupBy( a => a.PersonId )
-                .ToDictionary( k => k.Key, v => v.Select( s => new
-                {
-                    MemberId = s.Id,
-                    GroupRole = attendanceOccurrenceGroupTypeRoleCacheLookup.GetValueOrNull( s.GroupRoleId ),
-                    MemberAssignments = s.MemberAssignments.ToList()
-                } ) );
+                .ToDictionary(
+                    k => k.Key,
+                    v => v.Select( s => new
+                    {
+                        MemberId = s.Id,
+                        GroupRole = attendanceOccurrenceGroupTypeRoleCacheLookup.GetValueOrNull( s.GroupRoleId ),
+                        MemberAssignments = s.MemberAssignments.ToList()
+                    } ) );
 
             IEnumerable<SchedulerResourceAttend> schedulerResourceAttendList = scheduledAttendancesList.Select( a =>
             {
@@ -1352,11 +1392,8 @@ namespace Rock.Model
                         // they have this schedule as a preference, now check if the location preference is for this location
                         if ( memberAssignments.Any( x =>
                                 x.Schedule.Id == attendanceOccurrenceInfo.Schedule.Id && x.LocationId.HasValue
-                                && ( !x.LocationId.HasValue || x.LocationId == attendanceOccurrenceInfo.LocationId )
-                                )
-                            )
+                                && ( !x.LocationId.HasValue || x.LocationId == attendanceOccurrenceInfo.LocationId ) ) )
                         {
-
                             // they this schedule as a preference, and for this location
                             matchesPreference = ScheduledAttendanceItemMatchesPreference.MatchesPreference;
                         }
@@ -1486,19 +1523,21 @@ namespace Rock.Model
 
             // sort the occurrences by the Date, then by the associated GroupLocation.Order then by Location.name
             var sortedAttendanceOccurrenceList = attendanceOccurrencesQry
-                .Join( groupLocationQry,
-                        ao => new { GroupId = ao.GroupId.Value, LocationId = ao.LocationId.Value },
-                        gl => new { gl.GroupId, gl.LocationId }, ( ao, gl ) => new
-                        {
-                            AttendanceOccurrence = ao,
-                            GroupLocation = gl
-                        } )
-                        .OrderBy( a => a.AttendanceOccurrence.OccurrenceDate )
-                        .ThenBy( a => a.GroupLocation.Order )
-                        .ThenBy( a => a.GroupLocation.Location.Name )
-                        .Select( a => a.AttendanceOccurrence )
-                        .AsNoTracking()
-                        .ToList();
+                .Join(
+                    groupLocationQry,
+                    ao => new { GroupId = ao.GroupId.Value, LocationId = ao.LocationId.Value },
+                    gl => new { gl.GroupId, gl.LocationId },
+                    ( ao, gl ) => new
+                    {
+                        AttendanceOccurrence = ao,
+                        GroupLocation = gl
+                    } )
+                    .OrderBy( a => a.AttendanceOccurrence.OccurrenceDate )
+                    .ThenBy( a => a.GroupLocation.Order )
+                    .ThenBy( a => a.GroupLocation.Location.Name )
+                    .Select( a => a.AttendanceOccurrence )
+                    .AsNoTracking()
+                    .ToList();
 
             foreach ( var attendanceOccurrence in sortedAttendanceOccurrenceList )
             {
@@ -1586,7 +1625,7 @@ namespace Rock.Model
             // Also, only include resources that have a GroupMemberId since those would be the only ones that would be auto-schedulable
             var scheduleResourcesGroupMemberIds = schedulerResources
                 .Where( a => a.GroupMemberId.HasValue && a.IsAlreadyScheduledForGroup == false && a.HasConflict == false )
-                .Select( a => a.GroupMemberId ).ToList();
+                .Select( a => a.GroupMemberId.Value ).ToList();
 
             if ( !scheduleResourcesGroupMemberIds.Any() )
             {
@@ -1610,9 +1649,9 @@ namespace Rock.Model
                 PersonId = a.GroupMember.PersonId,
                 LocationId = a.LocationId,
                 ScheduleId = a.ScheduleId,
-                SpecificLocationAndSchedule = ( a.LocationId.HasValue && a.ScheduleId.HasValue ),
-                SpecificScheduleOnly = ( !a.LocationId.HasValue && a.ScheduleId.HasValue ),
-                SpecificLocationOnly = ( !a.LocationId.HasValue && !a.ScheduleId.HasValue ),
+                SpecificLocationAndSchedule = a.LocationId.HasValue && a.ScheduleId.HasValue,
+                SpecificScheduleOnly = !a.LocationId.HasValue && a.ScheduleId.HasValue,
+                SpecificLocationOnly = !a.LocationId.HasValue && !a.ScheduleId.HasValue,
             } ).ToList();
 
             if ( !groupMemberAssignmentsList.Any() )
@@ -1621,18 +1660,37 @@ namespace Rock.Model
                 return;
             }
 
-            // randomize order of group member assignments
-            groupMemberAssignmentsList = groupMemberAssignmentsList.OrderBy( a => Guid.NewGuid() ).ToList();
+            
 
             // use a new RockContext to use for adding attending resources so that get can get saved to the database without saving any changes associated with the current rockContext
             var groupAssignmentAttendanceRockContext = new RockContext();
             var groupAssignmentAttendanceService = new AttendanceService( groupAssignmentAttendanceRockContext );
 
-            // loop through the most specific assignments first (both LocationId and ScheduleId are assigned), then where only Schedule is specified, followed by ones where Location is specified
+            /* 2020-08-03 MDP
+             The rules for autoschedule
+               - Randomize order of List (order by Guid.NewGuid()
+
+               - then to schedule in this order
+               1) Person has both Schedule and Location specified
+               2) Person has Schedule specified but 'No Location Specified' for location
+               3) Person has Location specified but no schedule specified. Note that the UI doesn't currently support this option
+
+               *Note: We will sort by bool, but make true = 0 and false = 1 so that True comes before False
+
+               - This will end up with the list as follows
+               1)  People with Schedule And Location (in random order)
+               2)  People with Schedule only (in random order)
+               3)  People with Location only (in random order)
+             */
+
+            // randomize order of group member assignments
+            groupMemberAssignmentsList = groupMemberAssignmentsList.OrderBy( a => Guid.NewGuid() ).ToList();
+
+            // assign based on specificity rule (see above engineering note)
             var groupMemberAssignmentSortedBySpecificity = groupMemberAssignmentsList
-                .OrderBy( a => a.SpecificLocationAndSchedule )
-                .ThenBy( a => a.SpecificScheduleOnly )
-                .ThenBy( a => a.SpecificLocationOnly ).ToList();
+                .OrderBy( a => a.SpecificLocationAndSchedule ? 0 : 1 )
+                .ThenBy( a => a.SpecificScheduleOnly ? 0 : 1 )
+                .ThenBy( a => a.SpecificLocationOnly ? 0 : 1 ).ToList();
 
             foreach ( var groupMemberAssignment in groupMemberAssignmentSortedBySpecificity )
             {

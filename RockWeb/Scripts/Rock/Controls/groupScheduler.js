@@ -54,9 +54,7 @@
 
                             var $occurrenceColumn = $(source).closest('.js-occurrence-column');
                             var isSchedulerTargetColumn = $occurrenceColumn.data("is-scheduler-target-column")
-                            console.log(isSchedulerTargetColumn);
                             if (!isSchedulerTargetColumn) {
-                                console.log('return false');
                                 return false;
                             }
                         }
@@ -79,10 +77,7 @@
                             // In single-group mode, this occurrence column will be a schedule/day, and any target column can be dragged into
                             var $occurrenceColumn = $(target).closest('.js-occurrence-column');
                             var isSchedulerTargetColumn = $occurrenceColumn.data("is-scheduler-target-column")
-                            console.log('accepts');
-                            console.log(isSchedulerTargetColumn);
                             if (!isSchedulerTargetColumn) {
-                                console.log('return false');
                                 return false;
                             }
 
