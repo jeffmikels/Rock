@@ -110,7 +110,7 @@ namespace RockWeb.Blocks.GroupScheduling
             public const string SelectAllSchedules = PageParameterKey.SelectAllSchedules;
             public const string SelectedIndividualScheduleId = PageParameterKey.ScheduleId;
 
-            public const string SelectedLocationIds = PageParameterKey.LocationIds;
+            public const string PickedLocationIds = PageParameterKey.LocationIds;
 
             public const string SelectedResourceListSourceType = PageParameterKey.ResourceListSourceType;
             public const string GroupMemberFilterType = PageParameterKey.GroupMemberFilterType;
@@ -175,7 +175,7 @@ btnCopyToClipboard.ClientID );
             string postbackArgs = Request.Params["__EVENTARGUMENT"];
             if ( !string.IsNullOrWhiteSpace( postbackArgs ) )
             {
-                //var postbackArgument = 'update-preference|attendanceId:' + attendanceId|groupMemberId: + groupMemberId;
+                // var postbackArgument = 'update-preference|attendanceId:' + attendanceId|groupMemberId: + groupMemberId;
                 var postbackArgsParts = postbackArgs.Split( '|' );
                 if ( postbackArgsParts.Length == 3 && postbackArgsParts[0] == "update-preference" )
                 {
@@ -485,12 +485,12 @@ btnCopyToClipboard.ClientID );
             if ( this.PageParameter( PageParameterKey.LocationId ).IsNotNullOrWhiteSpace() )
             {
                 // if the URL has LocationId (singular) use that as the location
-                hfSelectedLocationIds.Value = this.PageParameter( PageParameterKey.LocationId );
+                hfPickedLocationIds.Value = this.PageParameter( PageParameterKey.LocationId );
             }
             else
             {
                 // other, if the URL has LocationIds (plural), of there is a Locations user preference use that as the locations
-                hfSelectedLocationIds.Value = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.LocationIds, UserPreferenceKey.SelectedLocationIds );
+                hfPickedLocationIds.Value = this.GetUrlSettingOrBlockUserPreference( PageParameterKey.LocationIds, UserPreferenceKey.PickedLocationIds );
             }
 
             SchedulerResourceGroupMemberFilterType groupMemberFilterType;
@@ -623,7 +623,7 @@ btnCopyToClipboard.ClientID );
 
             this.SetBlockUserPreference( UserPreferenceKey.SelectedDate, sundayDate.ToISO8601DateString(), false );
 
-            this.SetBlockUserPreference( UserPreferenceKey.SelectedLocationIds, hfSelectedLocationIds.Value, false );
+            this.SetBlockUserPreference( UserPreferenceKey.PickedLocationIds, hfPickedLocationIds.Value, false );
             bool selectAllSchedules = hfSelectedScheduleId.Value.AsIntegerOrNull() == null;
             int? selectedScheduleId = hfSelectedScheduleId.Value.AsIntegerOrNull();
             this.SetBlockUserPreference( UserPreferenceKey.SelectAllSchedules, selectAllSchedules.ToString(), false );
@@ -712,11 +712,19 @@ btnCopyToClipboard.ClientID );
             pnlResourceFilterDataView.Visible = resourceListSourceType == SchedulerResourceListSourceType.DataView;
 
             var listedLocations = GetListedLocations( authorizedListedGroups, scheduleIds );
-            var selectedLocationIds = hfSelectedLocationIds.Value.Split( ',' ).AsIntegerList();
+            var pickedLocationIds = hfPickedLocationIds.Value.Split( ',' ).AsIntegerList();
+            List<int> selectedLocationIds;
+            if ( pickedLocationIds.Any() )
+            {
+                selectedLocationIds = pickedLocationIds;
+            }
+            else
+            {
+                selectedLocationIds = listedLocations.Select( a => a.Id ).ToList();
+            }
 
             // fix up the list of selectedGroupLocationIds to only include ones that are listed
             selectedLocationIds = selectedLocationIds.Where( a => listedLocations.Any( l => l.Id == a ) ).ToList();
-            hfSelectedLocationIds.Value = selectedLocationIds.AsDelimited( "," );
 
             List<Location> selectedLocations = new LocationService( rockContext )
                 .GetByIds( selectedLocationIds )
@@ -729,13 +737,12 @@ btnCopyToClipboard.ClientID );
             string selectedLocationFilterText;
 
             // if no locations are selected(because 'all' was selected), or if all the listed locations are selected, then all locations will be selected
-            var allLocationsSelected = !selectedLocations.Any() || listedLocations.All( sl => selectedLocations.Any( ll => ll.Id == sl.Id ) );
+            var allLocationsSelected = !pickedLocationIds.Any() || listedLocations.All( sl => selectedLocations.Any( ll => ll.Id == sl.Id ) );
 
             if ( allLocationsSelected )
             {
                 selectedLocationFilterText = "All Locations";
                 selectedLocationIds = listedLocations.Where( a => a != null ).Select( a => a.Id ).ToList();
-                hfSelectedLocationIds.Value = selectedLocationIds.AsDelimited( "," );
                 selectAllLocations = true;
             }
             else if ( selectedLocations.Count() == 1 )
@@ -796,7 +803,7 @@ btnCopyToClipboard.ClientID );
             if ( filterIsValid )
             {
                 InitResourceList( authorizedListedGroups );
-                BindAttendanceOccurrences( authorizedListedGroups );
+                BindAttendanceOccurrences( authorizedListedGroups, selectedLocationIds );
             }
 
             // Create URL for selected settings
@@ -1069,7 +1076,7 @@ btnCopyToClipboard.ClientID );
         /// Binds the Attendance Occurrences ( Which shows the Location for the Attendance Occurrence for the selected Group + DateTime + Location ).
         /// groupScheduler.js will populate these with the scheduled resources
         /// </summary>
-        private void BindAttendanceOccurrences( List<Group> authorizedListedGroups )
+        private void BindAttendanceOccurrences( List<Group> authorizedListedGroups, List<int> selectedLocationIds )
         {
             var occurrenceSundayDate = hfOccurrenceSundayDate.Value.AsDateTime().Value.Date;
             var occurrenceSundayWeekStartDate = occurrenceSundayDate.AddDays( -6 );
@@ -1107,24 +1114,31 @@ btnCopyToClipboard.ClientID );
                 scheduleOccurrenceDatesLookupByScheduleId.Add( occurrenceSchedule.Id, scheduleOccurrenceDates );
             }
 
-            var selectedLocationIds = hfSelectedLocationIds.Value.Split( ',' ).AsIntegerList();
-
             var groupIds = authorizedListedGroups.Select( a => a.Id ).ToList();
 
             List<DateTime> occurrenceDatesForAllSchedules = new List<DateTime>();
 
             // create a lookup of GroupLocations for each GroupId
             // only include GroupLocations that have Schedules (since we can't schedule somebody for a group location that doesn't have any schedules)
-            var groupGroupLocationIdsLookupByGroupId = new GroupLocationService( new RockContext() ).Queryable()
+            var groupLocationQuery = new GroupLocationService( new RockContext() ).Queryable()
                     .Where( a =>
                         groupIds.Contains( a.GroupId )
                         && selectedLocationIds.Contains( a.LocationId )
-                        && a.Schedules.Any()
-                        )
+                        && a.Schedules.Any() );
+
+            var groupGroupLocationIdsLookupByGroupId = groupLocationQuery
                     .Select( a => new { a.GroupId, GroupLocationId = a.Id } )
                     .ToList()
                     .GroupBy( a => a.GroupId )
                     .ToDictionary( k => k.Key, v => v.Select( s => s.GroupLocationId ).ToList() );
+
+            var groupLocationSchedules = groupLocationQuery.Select( a => new
+            {
+                GroupLocationId = a.Id,
+                GroupId = a.GroupId,
+                LocationId = a.LocationId,
+                GroupLocationScheduleIds = a.Schedules.Select( s => s.Id ).ToList()
+            } ).ToList();
 
             List<int> selectedGroupLocationIds = new List<int>();
 
@@ -1149,13 +1163,19 @@ btnCopyToClipboard.ClientID );
                         // Note that it could be more than once a week if it is a daily scheduled, or it might not be in the selected week if it is every 2 weeks, etc
                         var scheduleOccurrenceDates = scheduleOccurrenceDatesLookupByScheduleId.GetValueOrNull( occurrenceSchedule.Id ) ?? new List<DateTime>();
 
-                        List<AttendanceOccurrence> missingAttendanceOccurrenceListForSchedule =
-                            missingAttendanceOccurrenceOccurrenceService.CreateMissingAttendanceOccurrences( scheduleOccurrenceDates, occurrenceSchedule.Id, groupGroupLocationIds );
+                        // only include groupLocations if the group has this schedule associated with the GroupLocation
+                        var scheduleGroupLocationIds = groupLocationSchedules.Where( a => a.GroupLocationScheduleIds.Contains( occurrenceSchedule.Id ) ).Select( a => a.GroupLocationId ).Distinct().ToList();
 
-                        if ( missingAttendanceOccurrenceListForSchedule.Any() )
+                        if ( scheduleGroupLocationIds.Any() )
                         {
-                            missingAttendanceOccurrenceOccurrenceService.AddRange( missingAttendanceOccurrenceListForSchedule );
-                            missingAttendanceOccurrenceRockContext.SaveChanges();
+                            List<AttendanceOccurrence> missingAttendanceOccurrenceListForSchedule =
+                                missingAttendanceOccurrenceOccurrenceService.CreateMissingAttendanceOccurrences( scheduleOccurrenceDates, occurrenceSchedule.Id, scheduleGroupLocationIds );
+
+                            if ( missingAttendanceOccurrenceListForSchedule.Any() )
+                            {
+                                missingAttendanceOccurrenceOccurrenceService.AddRange( missingAttendanceOccurrenceListForSchedule );
+                                missingAttendanceOccurrenceRockContext.SaveChanges();
+                            }
                         }
 
                         occurrenceDatesForAllSchedules.AddRange( scheduleOccurrenceDates );
@@ -1195,6 +1215,21 @@ btnCopyToClipboard.ClientID );
             var selectedGroupId = hfSelectedGroupId.Value.AsInteger();
 
             var attendanceOccurrencesOrderedList = attendanceOccurrencesList.OrderBy( a => a.ScheduledDateTime ).ThenBy( a => a.GroupLocationOrder ).ThenBy( a => a.LocationName ).ToList();
+
+            // limit to occurrences where the GroupLocation has the schedule configured
+            attendanceOccurrencesOrderedList = attendanceOccurrencesOrderedList
+                .Where( a =>
+                 {
+                     // only include this occurrence if Schedule is configured for this Group Location
+                     if ( groupLocationSchedules.Any( x => x.GroupId == a.Group.Id && x.LocationId == a.LocationId && x.GroupLocationScheduleIds.Contains( a.Schedule.Id ) ) )
+                     {
+                         return true;
+                     }
+                     else
+                     {
+                         return false;
+                     }
+                 } ).ToList();
 
             // if there are any people that signed up with no location preference, add the to a special list of "No Location Preference" occurrences to the top of the list
             var unassignedLocationOccurrenceList = attendanceOccurrenceService.Queryable()
@@ -1477,6 +1512,15 @@ btnCopyToClipboard.ClientID );
             /// The group location order.
             /// </value>
             public int GroupLocationOrder { get; internal set; }
+        }
+
+        private class GroupLocationScheduleInfo
+        {
+            public int GroupLocationId { get; set; }
+
+            public List<int> LocationScheduleIds { get; set; }
+
+            public int LocationId { get; internal set; }
         }
 
         /// <summary>
@@ -1875,8 +1919,8 @@ btnCopyToClipboard.ClientID );
                 .Where( a =>
                      a.GroupId.HasValue
                      && displayedAttendanceOccurrenceIdList.Contains( a.Id )
-                     && groupIds.Contains( a.GroupId.Value )
-                ).Select( a => a.Id ).ToList();
+                     && groupIds.Contains( a.GroupId.Value ) )
+                .Select( a => a.Id ).ToList();
 
             var attendanceService = new AttendanceService( rockContext );
 
@@ -1929,8 +1973,9 @@ btnCopyToClipboard.ClientID );
                 .Where( a =>
                      a.GroupId.HasValue
                      && displayedAttendanceOccurrenceIdList.Contains( a.Id )
-                     && groupIds.Contains( a.GroupId.Value )
-                ).Select( a => a.Id ).ToList();
+                     && groupIds.Contains( a.GroupId.Value ) )
+                .Select( a => a.Id )
+                .ToList();
 
             var attendanceService = new AttendanceService( rockContext );
             var sendConfirmationAttendancesQuery = attendanceService.GetPendingScheduledConfirmations()
@@ -2089,7 +2134,7 @@ btnCopyToClipboard.ClientID );
 
             if ( selectedLocationId.HasValue )
             {
-                var selectedLocationIds = hfSelectedLocationIds.Value.Split( ',' ).AsIntegerList();
+                var selectedLocationIds = hfPickedLocationIds.Value.Split( ',' ).AsIntegerList();
 
                 // toggle if the selected group location is in the selected group locations
                 if ( selectedLocationIds.Contains( selectedLocationId.Value ) )
@@ -2101,11 +2146,11 @@ btnCopyToClipboard.ClientID );
                     selectedLocationIds.Add( selectedLocationId.Value );
                 }
 
-                hfSelectedLocationIds.Value = selectedLocationIds.AsDelimited( "," );
+                hfPickedLocationIds.Value = selectedLocationIds.AsDelimited( "," );
             }
             else
             {
-                hfSelectedLocationIds.Value = "all";
+                hfPickedLocationIds.Value = "all";
             }
 
             ApplyFilter();
@@ -2227,8 +2272,6 @@ btnCopyToClipboard.ClientID );
 
             mdGroupScheduleAssignmentPreference.SubTitle = string.Format( "{0}, {1} - {2} ", groupMember.Person, attendanceOccurrence.Schedule.Name, attendanceOccurrence.Location.Name );
 
-            //lGroupScheduleAssignmentScheduleAndLocation.Text = 
-
             nbGroupScheduleAssignmentUpdatePreferenceInformation.Visible = rblGroupScheduleAssignmentUpdateOption.SelectedValue == "UpdatePreference";
 
             var preferenceForSchedule = preferencesForGroup.Where( a => a.ScheduleId == scheduleId ).FirstOrDefault();
@@ -2287,7 +2330,6 @@ btnCopyToClipboard.ClientID );
             var groupMemberId = hfGroupScheduleAssignmentGroupMemberId.Value.AsIntegerOrNull();
             var locationId = hfGroupScheduleAssignmentLocationId.Value.AsIntegerOrNull();
             var scheduleId = hfGroupScheduleAssignmentScheduleId.Value.AsIntegerOrNull();
-
 
             if ( !locationId.HasValue || !scheduleId.HasValue || !groupMemberId.HasValue )
             {

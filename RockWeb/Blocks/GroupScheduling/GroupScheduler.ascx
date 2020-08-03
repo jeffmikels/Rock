@@ -148,7 +148,7 @@
                                         <asp:Panel ID="pnlLocationFilter" CssClass="btn-group" runat="server">
 
                                                 <div class="dropdown-toggle btn btn-xs" data-toggle="dropdown">
-                                                    <asp:HiddenField ID="hfSelectedLocationIds" runat="server" />
+                                                    <asp:HiddenField ID="hfPickedLocationIds" runat="server" />
                                                     <asp:Literal ID="lSelectedLocationFilterText" runat="server" Text="Locations...." />
                                                 </div>
 

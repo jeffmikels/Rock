@@ -529,6 +529,11 @@ namespace Rock.Model
         /// <returns></returns>
         public List<AttendanceOccurrence> CreateMissingAttendanceOccurrences( List<DateTime> occurrenceDateList, int scheduleId, List<int> groupLocationIds )
         {
+            if ( !groupLocationIds.Any() )
+            {
+                return new List<AttendanceOccurrence>();
+            }
+
             var groupLocationQuery = new GroupLocationService( this.Context as RockContext ).GetByIds( groupLocationIds );
 
             List<AttendanceOccurrence> missingAttendanceOccurrenceList = new List<AttendanceOccurrence>();
