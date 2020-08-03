@@ -1220,6 +1220,7 @@ namespace Rock.Model
             {
                 s.GroupId,
                 s.Schedule,
+                s.LocationId,
                 s.OccurrenceDate
             } );
 
@@ -1309,7 +1310,13 @@ namespace Rock.Model
             {
                 a.Id,
                 a.PersonId,
-                a.GroupRoleId
+                a.GroupRoleId,
+                MemberAssignments = a.GroupMemberAssignments.Where( x => x.ScheduleId.HasValue ).Select( s => new
+                {
+                    Schedule = s.Schedule,
+                    LocationId = s.LocationId,
+                    LocationName = s.LocationId.HasValue ? s.Location.Name : null
+                } ),
             } )
                 .ToList()
                 .GroupBy( a => a.PersonId )
@@ -1317,6 +1324,7 @@ namespace Rock.Model
                 {
                     MemberId = s.Id,
                     GroupRole = attendanceOccurrenceGroupTypeRoleCacheLookup.GetValueOrNull( s.GroupRoleId ),
+                    MemberAssignments = s.MemberAssignments.ToList()
                 } ) );
 
             IEnumerable<SchedulerResourceAttend> schedulerResourceAttendList = scheduledAttendancesList.Select( a =>
@@ -1335,11 +1343,52 @@ namespace Rock.Model
                     ?.OrderBy( x => x.GroupRole?.Order ?? int.MaxValue )
                     ?.FirstOrDefault();
 
+                var memberAssignments = attendanceOccurrenceGroupMemberInfo?.MemberAssignments;
+                ScheduledAttendanceItemMatchesPreference matchesPreference = ScheduledAttendanceItemMatchesPreference.NoPreference;
+                if ( memberAssignments?.Any() == true )
+                {
+                    if ( memberAssignments.Any( x => x.Schedule.Id == attendanceOccurrenceInfo.Schedule.Id ) )
+                    {
+                        // they have this schedule as a preference, now check if the location preference is for this location
+                        if ( memberAssignments.Any( x =>
+                                x.Schedule.Id == attendanceOccurrenceInfo.Schedule.Id && x.LocationId.HasValue
+                                && ( !x.LocationId.HasValue || x.LocationId == attendanceOccurrenceInfo.LocationId )
+                                )
+                            )
+                        {
+
+                            // they this schedule as a preference, and for this location
+                            matchesPreference = ScheduledAttendanceItemMatchesPreference.MatchesPreference;
+                        }
+                        else
+                        {
+                            // they this schedule as a preference, but for a different location 
+                            matchesPreference = ScheduledAttendanceItemMatchesPreference.NotMatchesPreference;
+                        }
+                    }
+                    else if ( memberAssignments.Any( x => x.Schedule.Id != attendanceOccurrenceInfo.Schedule.Id ) )
+                    {
+                        // they don't have this schedule and location as a preference, but they have a preference for a different schedule
+                        matchesPreference = ScheduledAttendanceItemMatchesPreference.NotMatchesPreference;
+                    }
+                }
+
+                // to get this formatted as an html data-attribute
+                // - split case so we get a ' ' char
+                // - replace ' ' with '-'
+                // - lower case it
+                // for example, this will convert 'NotMatchesPreference' to 'not-matches-preference'
+                var matchesPreferenceAsDataAttribute = matchesPreference
+                    .ConvertToString( true )
+                    .Replace( ' ', '-' )
+                    .ToLower();
+
                 return new SchedulerResourceAttend
                 {
                     AttendanceId = a.AttendanceId,
                     OccurrenceDate = occurrenceDate,
                     ConfirmationStatus = status.ConvertToString( false ).ToLower(),
+                    MatchesPreference = matchesPreferenceAsDataAttribute,
                     PersonId = a.PersonId,
 
                     GroupMemberId = attendanceOccurrenceGroupMemberInfo?.MemberId,
@@ -2073,6 +2122,14 @@ namespace Rock.Model
         public DateTime OccurrenceDate { get; set; }
 
         /// <summary>
+        /// Gets or sets the <see cref="ScheduledAttendanceItemMatchesPreference"/> as a lowercase '-' delimited string
+        /// </summary>
+        /// <value>
+        /// The <see cref="ScheduledAttendanceItemMatchesPreference">Matching Preference</see> state
+        /// </value>
+        public string MatchesPreference { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this scheduled resource has a blackout conflict for the occurrence date
         /// </summary>
         /// <value>
@@ -2136,7 +2193,7 @@ namespace Rock.Model
         /// Gets or sets the <see cref="ScheduledAttendanceItemStatus"/> as a lowercase string
         /// </summary>
         /// <value>
-        /// The status.
+        /// The <see cref="ScheduledAttendanceItemStatus"/> status.
         /// </value>
         public string ConfirmationStatus { get; set; }
 
@@ -2323,6 +2380,27 @@ namespace Rock.Model
         {
             return this.PersonName;
         }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public enum ScheduledAttendanceItemMatchesPreference
+    {
+        /// <summary>
+        /// Person (group member) has a scheduling preference for the scheduled schedule and location
+        /// </summary>
+        MatchesPreference,
+
+        /// <summary>
+        /// Person (group member) has a scheduling preference for a different schedule (or the selected schedule but different location)
+        /// </summary>
+        NotMatchesPreference,
+
+        /// <summary>
+        /// Person (group member) has no scheduling preferences for the group (or the person isn't a member of the group )
+        /// </summary>
+        NoPreference
     }
 
     /// <summary>
