@@ -145,7 +145,7 @@ FROM
 
             Sql(
 @"UPDATE at
-SET at.ComponentConfigJson = '{""StreakType"":""' + st.Guid + '""}'
+SET at.ComponentConfigJson = '{""StreakType"":""' + CONVERT(varchar(100), st.Guid) + '""}'
 FROM 
 	AchievementType at
 	JOIN StreakType st ON st.Id = at.StreakTypeId" );
