@@ -143,6 +143,13 @@ FROM
 		AND a.[Key] = 'StreakType'
 		AND a.EntityTypeQualifierValue = at.ComponentEntityTypeId" );
 
+            Sql(
+@"UPDATE at
+SET at.ComponentConfigJson = '{""StreakType"":""' + st.Guid + '""}'
+FROM 
+	AchievementType at
+	JOIN StreakType st ON st.Id = at.StreakTypeId" );
+
             DropColumn( "dbo.AchievementType", "StreakTypeId" );
         }
 
