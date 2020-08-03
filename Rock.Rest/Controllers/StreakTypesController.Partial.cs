@@ -423,7 +423,7 @@ namespace Rock.Rest.Controllers
             var rockContext = Service.Context as RockContext;
             var result = rockContext.SaveChanges( new SaveChangesArgs { IsAchievementsEnabled = returnAchievements } );
 
-            if ( result.AchievementAttempts?.Any() == true )
+            if ( returnAchievements )
             {
                 return ControllerContext.Request.CreateResponse( HttpStatusCode.Created, new MarkEngagementResponse( result.AchievementAttempts ) );
             }
@@ -480,7 +480,7 @@ namespace Rock.Rest.Controllers
             var rockContext = Service.Context as RockContext;
             var result = rockContext.SaveChanges( new SaveChangesArgs { IsAchievementsEnabled = returnAchievements } );
 
-            if ( result.AchievementAttempts?.Any() == true )
+            if ( returnAchievements )
             {
                 return ControllerContext.Request.CreateResponse( HttpStatusCode.Created, new MarkEngagementResponse( result.AchievementAttempts ) );
             }
@@ -519,7 +519,14 @@ namespace Rock.Rest.Controllers
             /// <param name="achievementAttempts">The achievement attempts.</param>
             public MarkEngagementResponse( List<AchievementAttempt> achievementAttempts )
             {
-                AchievementAttempts = achievementAttempts.Select( aa => new AttemptListItem( aa ) ).ToList();
+                if ( achievementAttempts == null )
+                {
+                    AchievementAttempts = new List<AttemptListItem>();
+                }
+                else
+                {
+                    AchievementAttempts = achievementAttempts.Select( aa => new AttemptListItem( aa ) ).ToList();
+                }
             }
 
             /// <summary>
