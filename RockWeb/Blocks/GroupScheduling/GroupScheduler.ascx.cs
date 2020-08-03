@@ -1208,6 +1208,7 @@ btnCopyToClipboard.ClientID );
             {
                 selectedGroupId = attendanceOccurrencesOrderedList.Where( a => a.Group != null ).Select( a => a.Group.Id ).FirstOrDefault();
                 hfSelectedGroupId.Value = selectedGroupId.ToString();
+                InitResourceList( authorizedListedGroups );
             }
 
             List<OccurrenceColumnItem> occurrenceColumnDataList;

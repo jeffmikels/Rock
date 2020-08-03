@@ -473,6 +473,7 @@
                 $resourceDiv.attr('data-status', schedulerResource.ConfirmationStatus);
                 $resourceDiv.attr('data-person-id', schedulerResource.PersonId);
                 $resourceDiv.attr('data-has-scheduling-conflict', schedulerResource.HasSchedulingConflict);
+                $resourceDiv.attr('data-matches-preference', schedulerResource.MatchesPreference)
 
                 // entirely blacked out for all the occurrences for the selected week and schedule
                 $resourceDiv.attr('data-has-blackout-conflict', schedulerResource.HasBlackoutConflict);

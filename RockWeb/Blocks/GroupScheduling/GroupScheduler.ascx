@@ -192,18 +192,18 @@
                             <div>
                             <h5 class="mt-0 mb-4">Group Scheduler Help</h5>
                             <p><strong>Scheduling Basics</strong></p>
-                            <p>This screen allows you to schedule individuals into groups. Openings are show for each group location schedule to meet the configured minimum number of indivduals. Additional individuals can be added by dropping them into the ‘Add Individual’ zone.</p>
+                            <p>This screen allows you to schedule individuals into groups. Openings are shown for each group location schedule to meet the configured minimum number of individuals. Additional individuals can be added by dropping them into the ‘Add Individual’ zone.</p>
                             </div>
                             <div class="row mt-4">
                                 <div class="col-md-6">
                                     <p><strong>Scheduled Individual Legend</strong></p>
-                                    <p>Scheduled individuals have several states that they can be in. These states are described using an icon to determine how the invite matches their preference. A color descriptions the status of the invite.</p>
+                                    <p>Scheduled individuals have several states that they can be in. These states are described using an icon to determine how the invite matches their preference. A color describes the status of the invite.</p>
                                     <div class="text-center mb-5"><img src="/Assets/Images/group-scheduler/scheduled-legend.svg"></div>
                                 </div>
 
                                 <div class="col-md-6">
                                     <p><strong>Unscheduled Individuals Legend</strong></p>
-                                    <p>A person who is not scheduled can also be in various states. Each of these is represented by an icon. Rolling over the individuals will give more details about the state. Yellow indivduals can not be scheduled.</p>
+                                    <p>A person who is not scheduled can also be in various states. Each of these is represented by an icon. Rolling over the individuals will give more details about the state. Yellow individuals can not be scheduled.</p>
                                     <div class="text-left mb-5"><img src="/Assets/Images/group-scheduler/unscheduled-legend.svg"></div>
                                 </div>
                             </div>
@@ -321,9 +321,12 @@
                                 <div class="col-lg-9 col-md-8">
                                     <div class="board-scroll">
                                     <div class="js-scheduled-resource-template" style="display: none">
-                                        <%-- template that groupScheduler.js uses to populate scheduled resources, possible data-status values: pending, confirmed, declined --%>
+                                        <%-- template that groupScheduler.js uses to populate scheduled resources
+                                             data-status values: pending || confirmed || declined
+                                             data-matching-preference-state values: matches-preference || not-matches-preference || no-preference
+                                        --%>
 
-                                        <div class="js-resource resource unselectable" data-status="pending" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-attendance-id="" data-person-id="">
+                                        <div class="js-resource resource unselectable" data-status="pending||confirmed||declined" data-has-scheduling-conflict="false" data-matches-preference="matches-preference|not-matches-preference|no-preference" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-attendance-id="" data-person-id="">
 
                                             <div class="flex">
                                                 <span class="resource-name js-resource-name flex-grow-1"></span>

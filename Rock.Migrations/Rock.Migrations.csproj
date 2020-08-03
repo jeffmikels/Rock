@@ -73,6 +73,10 @@
     <Compile Include="Migrations\202007310704148_AddConnectionRequestDetailPageToConnectionType.Designer.cs">
       <DependentUpon>202007310704148_AddConnectionRequestDetailPageToConnectionType.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202007311741043_GroupSchedulingV2.cs" />
+    <Compile Include="Migrations\202007311741043_GroupSchedulingV2.Designer.cs">
+      <DependentUpon>202007311741043_GroupSchedulingV2.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Version 11.0\Version 1.11.0\202006231558281_PrayerRequestWorkflowAction.cs" />
     <Compile Include="Migrations\Version 11.0\Version 1.11.0\202006231558281_PrayerRequestWorkflowAction.Designer.cs">
       <DependentUpon>202006231558281_PrayerRequestWorkflowAction.cs</DependentUpon>
@@ -1327,6 +1331,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202007310704148_AddConnectionRequestDetailPageToConnectionType.resx">
       <DependentUpon>202007310704148_AddConnectionRequestDetailPageToConnectionType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202007311741043_GroupSchedulingV2.resx">
+      <DependentUpon>202007311741043_GroupSchedulingV2.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\Version 11.0\Version 1.11.0\202006231558281_PrayerRequestWorkflowAction.resx">
       <DependentUpon>202006231558281_PrayerRequestWorkflowAction.cs</DependentUpon>
