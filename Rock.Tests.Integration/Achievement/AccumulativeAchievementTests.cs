@@ -45,7 +45,8 @@ namespace Rock.Tests.Integration.RockTests.Model
         /// </summary>
         private static void CreateStreakTypeData()
         {
-            var personAlias = new PersonAliasService( _rockContext ).Queryable().First( pa => pa.Person.Guid == TestGuids.TestPeople.TedDecker.AsGuid() );
+            var tedDeckerGuid = TestGuids.TestPeople.TedDecker.AsGuid();
+            var personAlias = new PersonAliasService( _rockContext ).Queryable().First( pa => pa.Person.Guid == tedDeckerGuid );
             _personAliasId = personAlias.Id;
             _personId = personAlias.PersonId;
 
@@ -99,16 +100,17 @@ namespace Rock.Tests.Integration.RockTests.Model
             {
                 Name = "Test Achievement",
                 IsActive = true,
-                // SourceEntityQualifierValue = _streakTypeId.ToString(),
                 ComponentEntityTypeId = EntityTypeCache.GetId( ComponentEntityTypeName ) ?? 0,
                 MaxAccomplishmentsAllowed = 2,
-                AllowOverAchievement = false
+                AllowOverAchievement = false,
+                ComponentConfigJson = "{\"StreakType\": \"" + StreakTypeGuidString + "\"}"
             };
 
             _achievementTypeService.Add( achievementType );
             _rockContext.SaveChanges( true );
 
             achievementType.LoadAttributes();
+            achievementType.SetAttributeValue( Rock.Achievement.Component.AccumulativeAchievement.AttributeKey.StreakType, StreakTypeGuidString );
             achievementType.SetAttributeValue( Rock.Achievement.Component.AccumulativeAchievement.AttributeKey.TimespanInDays, 7.ToString() );
             achievementType.SetAttributeValue( Rock.Achievement.Component.AccumulativeAchievement.AttributeKey.NumberToAccumulate, 4.ToString() );
             achievementType.SaveAttributeValues();
