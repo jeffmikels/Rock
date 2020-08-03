@@ -86,18 +86,18 @@
 }
 
 .resource-list {
-  max-height: none !important;
 
   // .panel-body {
-    position: relative;
-    display: -ms-flexbox !important;
-    display: flex !important;
-    flex: 0 1 auto !important;
-    -ms-flex-direction: column !important;
-    flex-direction: column !important;
-    width: 100%;
-    top: auto !important;
-    overflow: hidden;
+  position: relative;
+  top: auto !important;
+  display: -ms-flexbox !important;
+  display: flex !important;
+  flex: 0 1 auto !important;
+  -ms-flex-direction: column !important;
+  flex-direction: column !important;
+  width: 100%;
+  max-height: none !important;
+  overflow: hidden;
   // }
 
   .scroll-list {
@@ -155,13 +155,11 @@
     &::before {
       display: block;
       flex-shrink: 0;
-      width: 16px;
-      height: 16px;
       margin-right: 8px;
-      content: " ";
-      background-color: #fff;
-      // border: 1px solid #d8d8d8;
-      border-radius: 50%;
+      font-family: @fa-font-face;
+      font-weight: @fa-theme-weight;
+      color: #fff;
+      content: "@{fa-var-circle}";
     }
   }
 
@@ -257,16 +255,24 @@
 }
 
 .flex::before {
+  .resource[data-matches-preference="not-matches-preference"] & {
+    content: "@{fa-var-minus-circle}";
+  }
+
+  .resource[data-matches-preference="matches-preference"] & {
+    content: "@{fa-var-check-circle}";
+  }
+
   .resource[data-status="pending"] & {
-    background-color: @pending-icon-color;
+    color: @pending-icon-color;
   }
 
   .resource[data-status="confirmed"] & {
-    background-color: @confirmed-icon-color;
+    color: @confirmed-icon-color;
   }
 
   .resource[data-status="declined"] & {
-    background-color: @declined-icon-color;
+    color: @declined-icon-color;
   }
 }
 
@@ -293,7 +299,7 @@
 
 .panel-groupscheduler .occurrence-filter-options {
   margin-bottom: 15px;
-  background-color: magenta;
+  background-color: #f0f;
 }
 
 .dropzone {
@@ -383,13 +389,13 @@
 .resource-note {
   display: -webkit-box;
   max-height: 32px;
+  margin-top: 8px;
   overflow: hidden;
   font-size: 12px;
   line-height: 16px;
   text-overflow: ellipsis;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  margin-top: 8px;
 }
 
 /* Resource List */
@@ -452,7 +458,7 @@
       top: -(@progress-height);
       width: 1px;
       height: 100%;
-      background-color: darkgreen;
+      background-color: #006400;
     }
   }
 }
@@ -769,10 +775,8 @@
 
 .styled-scroll ::-webkit-scrollbar-thumb {
   width: 8px;
-  width: 8px;
 }
 
-.styled-scroll-white ::-webkit-scrollbar-track
-.styled-scroll-white::-webkit-scrollbar-track {
+.styled-scroll-white ::-webkit-scrollbar-track .styled-scroll-white::-webkit-scrollbar-track {
   background-color: #fff !important;
 }
