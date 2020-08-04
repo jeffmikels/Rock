@@ -333,11 +333,10 @@
                                                 <span class="resource-member-role js-resource-member-role"></span>
 
                                                 <div class="resource-meta">
-
                                                     <div class="js-resource-meta text-right"></div>
                                                 </div>
                                                 <div class="dropdown js-resource-actions hide-transit">
-                                                    <button class="btn btn-link btn-overflow" type="button" data-toggle="dropdown"><i class="fa fa-ellipsis-v"></i></button>
+                                                    <button class="btn btn-link btn-overflow" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-ellipsis-v"></i></button>
                                                     <ul class="dropdown-menu dropdown-menu-right">
                                                         <li>
                                                             <button type="button" class="dropdown-item btn-link js-markconfirmed">Mark Confirmed</button>
