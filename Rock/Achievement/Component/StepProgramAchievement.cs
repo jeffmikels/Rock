@@ -35,7 +35,7 @@ namespace Rock.Achievement.Component
     /// Use to track achievements earned by accumulating interactions
     /// </summary>
     /// <seealso cref="AchievementComponent" />
-    [Description( "Use to track achievements earned by completing a step program" )]
+    [Description( "Use to track achievements earned by completing a step program. This achievement can only be earned once and there is no overachievement regardless of the settings above." )]
     [Export( typeof( AchievementComponent ) )]
     [ExportMetadata( "ComponentName", "Steps: Program Completion" )]
 
@@ -277,8 +277,8 @@ namespace Rock.Achievement.Component
                 achievementAttemptService.Add( currentAttempt );
             }
 
-            var attributeMinDate = GetAttributeValue( achievementTypeCache, AttributeKey.StartDateTime ).AsDateTime() ?? DateTime.MinValue;
-            var attributeMaxDate = GetAttributeValue( achievementTypeCache, AttributeKey.EndDateTime ).AsDateTime() ?? DateTime.MaxValue;
+            var attributeMinDate = GetAttributeValue( achievementTypeCache, AttributeKey.StartDateTime ).AsDateTime();
+            var attributeMaxDate = GetAttributeValue( achievementTypeCache, AttributeKey.EndDateTime ).AsDateTime();
             var completedStepTypeDates = GetCompletedStepTypeDates( achievementTypeCache, step.PersonAliasId, attributeMinDate, attributeMaxDate );
 
             var stepProgram = GetStepProgramCache( achievementTypeCache );
@@ -287,8 +287,8 @@ namespace Rock.Achievement.Component
             var progress = CalculateProgress( completedStepTypeDates.Count, stepTypeCount );
             var isSuccessful = progress >= 1m;
 
-            currentAttempt.AchievementAttemptStartDateTime = completedStepTypeDates.FirstOrDefault();
-            currentAttempt.AchievementAttemptEndDateTime = completedStepTypeDates.LastOrDefault();
+            currentAttempt.AchievementAttemptStartDateTime = completedStepTypeDates.Any() ? completedStepTypeDates.First() : RockDateTime.Today;
+            currentAttempt.AchievementAttemptEndDateTime = completedStepTypeDates.Any() ? completedStepTypeDates.Last() : RockDateTime.Today;
             currentAttempt.Progress = progress;
             currentAttempt.IsClosed = isSuccessful;
             currentAttempt.IsSuccessful = isSuccessful;
@@ -358,19 +358,29 @@ namespace Rock.Achievement.Component
         /// <param name="minDate">The minimum date.</param>
         /// <param name="maxDate">The maximum date.</param>
         /// <returns></returns>
-        private List<DateTime> GetCompletedStepTypeDates( AchievementTypeCache achievementTypeCache, int personAliasId, DateTime minDate, DateTime maxDate )
+        private List<DateTime> GetCompletedStepTypeDates( AchievementTypeCache achievementTypeCache, int personAliasId, DateTime? minDate, DateTime? maxDate )
         {
             var rockContext = new RockContext();
             var query = GetSourceEntitiesQuery( achievementTypeCache, rockContext ) as IQueryable<Step>;
-            var dayAfterMaxDate = maxDate.AddDays( 1 );
 
-            rockContext.SqlLogging( true );
-            return query
+            query = query
                 .AsNoTracking()
                 .Where( s =>
                     s.PersonAliasId == personAliasId &&
-                    s.CompletedDateTime >= minDate &&
-                    s.CompletedDateTime < dayAfterMaxDate )
+                    s.CompletedDateTime.HasValue );
+
+            if ( minDate.HasValue )
+            {
+                query = query.Where( s => s.CompletedDateTime >= minDate.Value );
+            }
+
+            if ( maxDate.HasValue )
+            {
+                var dayAfterMaxDate = maxDate.Value.AddDays( 1 );
+                query = query.Where( s => s.CompletedDateTime < dayAfterMaxDate );
+            }
+
+            return query
                 .ToList()
                 .GroupBy( s => s.StepTypeId )
                 .Select( g => new
@@ -381,27 +391,6 @@ namespace Rock.Achievement.Component
                 .Select( s => s.CompletedDateTime )
                 .OrderBy( d => d )
                 .ToList();
-        }
-
-        /// <summary>
-        /// Gets the attempt from the accumulation
-        /// </summary>
-        /// <param name="accumulation">The accumulation.</param>
-        /// <param name="targetCount">The target count.</param>
-        /// <param name="isClosed">if set to <c>true</c> [is closed].</param>
-        /// <returns></returns>
-        private static AchievementAttempt GetAttempt( ComputedStreak accumulation, int targetCount, bool isClosed )
-        {
-            var progress = CalculateProgress( accumulation.Count, targetCount );
-
-            return new AchievementAttempt
-            {
-                AchievementAttemptStartDateTime = accumulation.StartDate,
-                AchievementAttemptEndDateTime = accumulation.EndDate,
-                Progress = progress,
-                IsClosed = isClosed,
-                IsSuccessful = progress >= 1m
-            };
         }
 
         #endregion Helpers
