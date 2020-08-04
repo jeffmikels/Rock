@@ -310,7 +310,7 @@ namespace RockWeb.Blocks.GroupScheduling
 
                 // just the first level of child groups, not all decendants
                 var childGroupIds = groupService.Queryable().Where( a => a.ParentGroupId == parentGroupId ).Select( a => a.Id ).ToList();
-                    allGroupIds.AddRange( childGroupIds );
+                allGroupIds.AddRange( childGroupIds );
             }
 
             allGroupIds = allGroupIds.Distinct().ToList();
@@ -329,10 +329,17 @@ namespace RockWeb.Blocks.GroupScheduling
                 .Queryable()
                 .Where( a => a.ScheduleId.HasValue && a.LocationId.HasValue && a.GroupId.HasValue )
                 .WhereDeducedIsActive()
-                .Where( a => allGroupIds.Contains( a.GroupId.Value ) )
-                .Where( a => locationIds.Contains( a.LocationId.Value ) )
-                .Where( a => scheduleIds.Contains( a.ScheduleId.Value ) )
-                .Where( a => a.OccurrenceDate == occurrenceDate );
+                .Where( a =>
+                    allGroupIds.Contains( a.GroupId.Value )
+                    && a.OccurrenceDate == occurrenceDate
+                    && scheduleIds.Contains( a.ScheduleId.Value )
+                    );
+
+            // if specific locations are specified, use those, otherwise just show all
+            if ( locationIds.Any() )
+            {
+                attendanceOccurrenceQuery = attendanceOccurrenceQuery.Where( a => locationIds.Contains( a.LocationId.Value ) );
+            }
 
             // limit attendees to ones that schedules (or are checked-in regardless of being scheduled)
             var confirmedAttendancesForOccurrenceQuery = attendanceOccurrenceQuery

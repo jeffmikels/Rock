@@ -713,6 +713,7 @@ btnCopyToClipboard.ClientID );
 
             var listedLocations = GetListedLocations( authorizedListedGroups, scheduleIds );
             var pickedLocationIds = hfPickedLocationIds.Value.Split( ',' ).AsIntegerList();
+            pickedLocationIds = pickedLocationIds.Where( p => listedLocations.Any( a => a.Id == p ) ).ToList();
             List<int> selectedLocationIds;
             if ( pickedLocationIds.Any() )
             {
@@ -1204,6 +1205,7 @@ btnCopyToClipboard.ClientID );
                     Schedule = a.AttendanceOccurrence.Schedule,
                     OccurrenceDate = a.AttendanceOccurrence.OccurrenceDate,
                     AttendanceOccurrenceId = a.AttendanceOccurrence.Id,
+                    HasAttendees = a.AttendanceOccurrence.Attendees.Any(),
                     CapacityInfo = new CapacityInfo
                     {
                         MinimumCapacity = a.GroupLocationScheduleConfig.MinimumCapacity,
@@ -1227,7 +1229,15 @@ btnCopyToClipboard.ClientID );
                      }
                      else
                      {
-                         return false;
+                         if ( a.HasAttendees )
+                         {
+                             // if the schedule isn't configured for this group's location, but it has attendees, show it
+                             return true;
+                         }
+                         else
+                         {
+                             return false;
+                         }
                      }
                  } ).ToList();
 
@@ -1447,6 +1457,15 @@ btnCopyToClipboard.ClientID );
             /// The attendance occurrence identifier.
             /// </value>
             public int AttendanceOccurrenceId { get; set; }
+
+            /// <summary>
+            /// Gets or sets a value indicating whether this instance has attendees.
+            /// Use this to determine if this occurrence should be shown, even if the Group doesn't have the Location/Schedule configured
+            /// </summary>
+            /// <value>
+            ///   <c>true</c> if this instance has attendees; otherwise, <c>false</c>.
+            /// </value>
+            public bool HasAttendees { get; set; }
 
             /// <summary>
             /// Gets or sets the capacity information.
