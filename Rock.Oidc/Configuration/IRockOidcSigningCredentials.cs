@@ -13,33 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
-//
 
-namespace Rock.Oidc
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
+
+namespace Rock.Oidc.Configuration
 {
     /// <summary>
-    /// OIDC Paths/Routes
+    /// 
     /// </summary>
-    public static class Paths
+    public interface IRockOidcSigningCredentials
     {
         /// <summary>
-        /// The authorize path
+        /// Gets the signing keys.
         /// </summary>
-        public static readonly string AuthorizePath = "/Auth/Authorize";
-
-        /// <summary>
-        /// The token path
-        /// </summary>
-        public static readonly string TokenPath = "/Auth/Token";
-
-        /// <summary>
-        /// The logout path
-        /// </summary>
-        public static readonly string LogoutPath = "/Auth/Logout";
-
-        /// <summary>
-        /// The user information
-        /// </summary>
-        public static readonly string UserInfo = "/Auth/UserInfo";
+        /// <value>
+        /// The signing keys.
+        /// </value>
+        ReadOnlyCollection<RSA> SigningKeys { get; }
     }
 }
