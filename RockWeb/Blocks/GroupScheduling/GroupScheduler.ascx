@@ -277,7 +277,7 @@
                                         <div class="js-unscheduled-resource-template" style="display: none">
                                             <%-- template that groupScheduler.js uses to populate unscheduled resources, data-status will always be "unscheduled" when it is in the list of unscheduled resources --%>
 
-                                            <div class="js-resource resource unselectable" data-status="unscheduled" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-is-scheduled="" data-person-id="">
+                                            <div class="js-resource resource unselectable" data-status="unscheduled" data-has-scheduling-conflict="false" data-has-requirements-conflict="false" data-has-blackout-conflict="false" data-is-scheduled="" data-person-id="" data-placement="bottom">
                                                 <div class="flex">
                                                     <span class="resource-name js-resource-name"></span>
                                                     <div class="js-resource-name-meta">
