@@ -21,8 +21,26 @@ namespace Rock.Oidc.Configuration
 {
     internal class SerializedRockRsaKey
     {
+        /// <summary>
+        /// Gets or sets the key identifier.
+        /// </summary>
+        /// <value>
+        /// The key identifier.
+        /// </value>
         public string KeyId { get; set; } = System.Guid.NewGuid().ToString();
+        /// <summary>
+        /// Gets or sets the key created date.
+        /// </summary>
+        /// <value>
+        /// The key created date.
+        /// </value>
         public DateTime KeyCreatedDate { get; set; } = DateTime.UtcNow;
+        /// <summary>
+        /// Gets or sets the parameters.
+        /// </summary>
+        /// <value>
+        /// The parameters.
+        /// </value>
         public RSAParameters Parameters { get; set; }
     }
 }

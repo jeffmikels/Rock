@@ -27,9 +27,33 @@ namespace Rock.Oidc.Configuration
     /// </summary>
     public class RockOidcSettings
     {
+        /// <summary>
+        /// Gets or sets the access token lifetime.
+        /// </summary>
+        /// <value>
+        /// The access token lifetime.
+        /// </value>
         public int AccessTokenLifetime { get; set; }
+        /// <summary>
+        /// Gets or sets the identity token lifetime.
+        /// </summary>
+        /// <value>
+        /// The identity token lifetime.
+        /// </value>
         public int IdentityTokenLifetime { get; set; }
+        /// <summary>
+        /// Gets or sets the refresh token lifetime.
+        /// </summary>
+        /// <value>
+        /// The refresh token lifetime.
+        /// </value>
         public int RefreshTokenLifetime { get; set; }
+        /// <summary>
+        /// Gets or sets the signing key lifetime.
+        /// </summary>
+        /// <value>
+        /// The signing key lifetime.
+        /// </value>
         public int SigningKeyLifetime { get; set; }
 
         /// <summary>

@@ -20,7 +20,7 @@ using System.Security.Cryptography;
 namespace Rock.Oidc.Configuration
 {
     /// <summary>
-    /// 
+    /// An interface that represents the RockOidcSigning Credentials.
     /// </summary>
     public interface IRockOidcSigningCredentials
     {
