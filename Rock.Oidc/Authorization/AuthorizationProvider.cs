@@ -25,7 +25,7 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Security;
 
-namespace Rock.Oidc
+namespace Rock.Oidc.Authorization
 {
     /// <summary>
     /// Authorization Provider
@@ -42,6 +42,7 @@ namespace Rock.Oidc
         {
             var rockContext = new RockContext();
             var userLoginService = new UserLoginService( rockContext );
+            var requestScopes = context.Request.GetScopes();
 
             // Only handle grant_type=password requests and let ASOS
             // process grant_type=refresh_token requests automatically.
@@ -64,15 +65,6 @@ namespace Rock.Oidc
                         description: "The specified user is not allowed to sign in." );
                     return;
                 }
-
-                // Reject the token request if two-factor authentication has been enabled by the user.
-                //if ( manager.SupportsUserTwoFactor && await manager.GetTwoFactorEnabledAsync( user ) )
-                //{
-                //    context.Reject(
-                //        error: OpenIdConnectConstants.Errors.InvalidGrant,
-                //        description: "Two-factor authentication is required for this account." );
-                //    return;
-                //}
 
                 // Ensure the user is not already locked out.
                 if ( user.IsLockedOut != null && user.IsLockedOut.Value )
@@ -104,46 +96,18 @@ namespace Rock.Oidc
                 //{
                 //    await manager.ResetAccessFailedCountAsync( user );
                 //}
-                var identity = new ClaimsIdentity(
-                        OpenIdConnectServerDefaults.AuthenticationType,
-                        OpenIdConnectConstants.Claims.Name,
-                        OpenIdConnectConstants.Claims.Role );
 
-                // Note: the subject claim is always included in both identity and
-                // access tokens, even if an explicit destination is not specified.
-                identity.AddClaim(
-                   new Claim( OpenIdConnectConstants.Claims.Subject, user.UserName )
-                        .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                        OpenIdConnectConstants.Destinations.IdentityToken ) );
-
-                identity.AddClaim(
-                new Claim( OpenIdConnectConstants.Claims.Username, user.UserName )
-                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
-
-                // When adding custom claims, you MUST specify one or more destinations.
-                // Read "part 7" for more information about custom claims and scopes.
-                identity.AddClaim(
-                    new Claim( OpenIdConnectConstants.Claims.Name, user.Person.FullName )
-                        .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                            OpenIdConnectConstants.Destinations.IdentityToken ) );
+                var identity = RockIdentityHelper.GetRockClaimsIdentity( user, requestScopes );
 
                 // Create a new authentication ticket holding the user identity.
                 var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );
 
                 // Set the list of scopes granted to the client application.
-                ticket.SetScopes(
-                    /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
-                    /* email: */ OpenIdConnectConstants.Scopes.Email,
-                    /* profile: */ OpenIdConnectConstants.Scopes.Profile,
-                    OpenIdConnectConstants.Scopes.Phone,
-                    OpenIdConnectConstants.Scopes.Address,
-                    OpenIdConnectConstants.Scopes.OfflineAccess);
+                ticket.SetScopes( requestScopes );
 
                 // Set the resource servers the access token should be issued for.
                 ticket.SetResources( "resource_server" );
                 context.Validate( ticket );
-
             }
 
             if ( context.Request.IsClientCredentialsGrantType() )

@@ -18,6 +18,7 @@ using System;
 using System.IdentityModel.Tokens;
 using Microsoft.Owin;
 using Owin;
+using Rock.Oidc.Authorization;
 using Rock.Oidc.Configuration;
 
 namespace Rock.Oidc
@@ -45,7 +46,6 @@ namespace Rock.Oidc
                 options.LogoutEndpointPath = new PathString( Paths.LogoutPath );
                 options.TokenEndpointPath = new PathString( Paths.TokenPath );
                 options.UserinfoEndpointPath = new PathString( Paths.UserInfo );
-
 
                 options.ApplicationCanDisplayErrors = System.Web.Hosting.HostingEnvironment.IsDevelopmentEnvironment;
                 options.AllowInsecureHttp = System.Web.Hosting.HostingEnvironment.IsDevelopmentEnvironment;

@@ -19,17 +19,17 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Dynamic;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using AspNet.Security.OpenIdConnect.Primitives;
-using AspNet.Security.OpenIdConnect.Server;
 using Microsoft.Owin.Security;
 using Owin;
 using Owin.Security.OpenIdConnect.Extensions;
+using Owin.Security.OpenIdConnect.Server;
 using Rock;
 using Rock.Data;
 using Rock.Model;
+using Rock.Oidc.Authorization;
 using Rock.Web.UI;
 
 namespace RockWeb.Blocks.Oidc
@@ -202,7 +202,7 @@ namespace RockWeb.Blocks.Oidc
             // Note: OpenIdConnectServerHandler will automatically take care of redirecting
             // the user agent to the client application using the appropriate response_mode.
             var owinContext = Context.GetOwinContext();
-            owinContext.Authentication.Challenge( OpenIdConnectServerDefaults.AuthenticationScheme );
+            owinContext.Authentication.Challenge( OpenIdConnectServerDefaults.AuthenticationType );
         }
 
         /// <summary>
@@ -240,7 +240,7 @@ namespace RockWeb.Blocks.Oidc
             var scopes = GetRequestedScopes();
             var scopeViewModels = scopes.Select( s => new ScopeViewModel
             {
-                Name = s
+                Name = RockIdentityHelper.GetScopeDescription( s )
             } );
 
             rScopes.DataSource = scopeViewModels;
@@ -288,33 +288,12 @@ namespace RockWeb.Blocks.Oidc
             var owinContext = Context.GetOwinContext();
             var request = owinContext.GetOpenIdConnectRequest();
 
+            // TODO: only allow valid scopes.
+            var requestedScopes = request.GetScopes();
+
             // Create a new ClaimsIdentity containing the claims that
             // will be used to create an id_token, a token or a code.
-            var identity = new ClaimsIdentity(
-                OpenIdConnectServerDefaults.AuthenticationScheme,
-                OpenIdConnectConstants.Claims.Name,
-                OpenIdConnectConstants.Claims.Role );
-
-            // Note: the "sub" claim is mandatory and an exception is thrown if this claim is missing.
-            identity.AddClaim(
-                new Claim( OpenIdConnectConstants.Claims.Subject, CurrentUser.UserName )
-                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
-
-            identity.AddClaim(
-                new Claim( OpenIdConnectConstants.Claims.Username, CurrentUser.UserName )
-                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
-
-            identity.AddClaim(
-                new Claim( OpenIdConnectConstants.Claims.Name, CurrentUser.Person.FullName )
-                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
-
-            identity.AddClaim(
-                new Claim( OpenIdConnectConstants.Claims.Email, CurrentUser.Person.Email )
-                    .SetDestinations( OpenIdConnectConstants.Destinations.AccessToken,
-                                     OpenIdConnectConstants.Destinations.IdentityToken ) );
+            var identity = RockIdentityHelper.GetRockClaimsIdentity( CurrentUser, requestedScopes );
 
             var rockContext = new RockContext();
             var authClientService = new AuthClientService( rockContext );
@@ -330,16 +309,8 @@ namespace RockWeb.Blocks.Oidc
             // Create a new authentication ticket holding the user identity.
             var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );
 
-            // Set the list of scopes granted to the client application.
-            // Note: this sample always grants the "openid", "email" and "profile" scopes
-            // when they are requested by the client application: a real world application
-            // would probably display a form allowing to select the scopes to grant.
-            ticket.SetScopes( new[] {
-                /* openid: */ OpenIdConnectConstants.Scopes.OpenId,
-                /* email: */ OpenIdConnectConstants.Scopes.Email,
-                /* profile: */ OpenIdConnectConstants.Scopes.Profile,
-                OpenIdConnectConstants.Scopes.OfflineAccess,
-            }.Intersect( request.GetScopes() ) );
+            // We should set the scopes to the requested valid scopes.
+            ticket.SetScopes( requestedScopes );
 
             // Set the resource servers the access token should be issued for.
             ticket.SetResources( "resource_server" );

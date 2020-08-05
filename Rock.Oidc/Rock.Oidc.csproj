@@ -149,7 +149,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AuthorizationProvider.cs" />
+    <Compile Include="Authorization\AuthorizationProvider.cs" />
+    <Compile Include="Authorization\RockIdentityHelper.cs" />
     <Compile Include="Configuration\IRockOidcSigningCredentials.cs" />
     <Compile Include="Configuration\RockOidcSettings.cs" />
     <Compile Include="Configuration\RockOidcSigningCredentials.cs" />

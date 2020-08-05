@@ -13,7 +13,7 @@
             </div>
             <div class="panel-body">
                 <p>
-                    Would you like to grant <asp:Literal ID="lClientName" runat="server" /> access to the following information:
+                    Would you like to grant <asp:Literal ID="lClientName" runat="server" /> access to your information:
                 </p>
                 <ul>
                     <asp:Repeater ID="rScopes" runat="server">
