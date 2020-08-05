@@ -12,7 +12,7 @@
 
                 <div class="panel-labels hidden-xs">
                     <button id="btnHelp" runat="server"
-                        class="btn btn-link p-0 text-color"
+                        class="btn btn-link p-0 text-color focus-no-outline"
                         onclick="$('#filter-drawer').slideToggle();return false;">
                         <i class='fa fa-question'></i>
                     </button>
