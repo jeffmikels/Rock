@@ -54,6 +54,7 @@ namespace Rock.Rest.Filters
                 //}
             }
 
+            // TODO: Put behind AuthClient Setting?
             // If check if ASOS authentication occurred.
             principal = actionContext.RequestContext.Principal;
 
