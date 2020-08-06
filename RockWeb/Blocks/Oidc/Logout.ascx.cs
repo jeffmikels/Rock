@@ -17,8 +17,8 @@
 using System;
 using System.ComponentModel;
 using System.Web;
-using AspNet.Security.OpenIdConnect.Server;
 using Owin;
+using Owin.Security.OpenIdConnect.Server;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.UI;
@@ -68,7 +68,7 @@ namespace RockWeb.Blocks.Oidc
             var response = context.GetOpenIdConnectResponse();
             if ( response == null )
             {
-                context.Authentication.SignOut( OpenIdConnectServerDefaults.AuthenticationScheme );
+                context.Authentication.SignOut( OpenIdConnectServerDefaults.AuthenticationType );
                 Authorization.SignOut();
             }
             else if ( !string.IsNullOrWhiteSpace( response.Error ) )

@@ -240,7 +240,7 @@ namespace RockWeb.Blocks.Oidc
             var scopes = GetRequestedScopes();
             var scopeViewModels = scopes.Select( s => new ScopeViewModel
             {
-                Name = RockIdentityHelper.GetScopeDescription( s )
+                Name = s
             } );
 
             rScopes.DataSource = scopeViewModels;
@@ -257,8 +257,37 @@ namespace RockWeb.Blocks.Oidc
         /// <returns></returns>
         private List<string> GetRequestedScopes()
         {
-            var scopeString = PageParameter( PageParamKey.Scope ) ?? string.Empty;
-            return scopeString.SplitDelimitedValues().ToList();
+            var scopes = new List<string> { "Authorization" };
+            var owinContext = Context.GetOwinContext();
+            var request = owinContext.GetOpenIdConnectRequest();
+            var requestedScopes = request.GetScopes();
+            var rockContext = new RockContext();
+            var authClientService = new AuthClientService( rockContext );
+
+            var clientAllowedClaims = authClientService
+                .Queryable()
+                .Where( ac => ac.ClientId == request.ClientId )
+                .Select( ac => ac.AllowedClaims ).FirstOrDefault();
+
+            var parsedAllowedClientClaims = clientAllowedClaims.FromJsonOrNull<List<string>>();
+            if ( parsedAllowedClientClaims == null )
+            {
+                return new List<string>();
+            }
+            var authClaimService = new AuthClaimService( rockContext );
+            var activeAllowedClientClaims = authClaimService
+                .Queryable()
+                .Where( ac => parsedAllowedClientClaims.Contains( ac.Name ) )
+                .Where( ac => ac.IsActive )
+                .Where( ac => requestedScopes.Contains( ac.Scope.Name ) )
+                .Select( ac => new { Scope = ac.Scope.PublicName, Claim = ac.PublicName } )
+                .GroupBy( ac => ac.Scope, ac => ac.Claim )
+                .ToList()
+                .Select( ac => new { Scope = ac.Key, Claims = string.Join( ", ", ac.ToArray() ) } );
+
+            scopes.AddRange( activeAllowedClientClaims.Select( ac => ac.Scope == ac.Claims ? ac.Scope : ac.Scope + " (" + ac.Claims + ")" ) );
+            return scopes;
+            //return scopeString.SplitDelimitedValues().ToList();
         }
 
         /// <summary>
@@ -290,21 +319,28 @@ namespace RockWeb.Blocks.Oidc
 
             // TODO: only allow valid scopes.
             var requestedScopes = request.GetScopes();
-
-            // Create a new ClaimsIdentity containing the claims that
-            // will be used to create an id_token, a token or a code.
-            var identity = RockIdentityHelper.GetRockClaimsIdentity( CurrentUser, requestedScopes );
-
-            var rockContext = new RockContext();
-            var authClientService = new AuthClientService( rockContext );
             var authClientId = PageParameter( PageParamKey.ClientId );
-            var authClient = authClientService.GetByClientIdNonAsync( authClientId );
+            IDictionary<string, string> clientAllowedClaims = null;
 
-            if ( authClient == null )
+            AuthClient authClient = null;
+            IEnumerable<string> clientAllowedScopes = null;
+            using ( var rockContext = new RockContext() )
+            {
+                var authClientService = new AuthClientService( rockContext );
+                authClient = authClientService.GetByClientIdNonAsync( authClientId );
+                clientAllowedScopes = RockIdentityHelper.NarrowRequestedScopesToApprovedScopes( rockContext, authClientId, requestedScopes );
+                clientAllowedClaims = RockIdentityHelper.GetAllowedClientClaims( rockContext, authClientId, clientAllowedScopes );
+            }
+
+            if ( authClient == null || clientAllowedScopes == null || clientAllowedClaims == null )
             {
                 // TODO: Error
                 return;
             }
+
+            // Create a new ClaimsIdentity containing the claims that
+            // will be used to create an id_token, a token or a code.
+            var identity = RockIdentityHelper.GetRockClaimsIdentity( CurrentUser, clientAllowedClaims );
 
             // Create a new authentication ticket holding the user identity.
             var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );

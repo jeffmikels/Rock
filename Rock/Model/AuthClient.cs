@@ -31,6 +31,34 @@ namespace Rock.Model
     [DataContract]
     public class AuthClient : Model<AuthClient>, IHasActiveFlag
     {
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [allow user API access].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [allow user API access]; otherwise, <c>false</c>.
+        /// </value>
+        [DataMember]
+        public bool AllowUserApiAccess { get; set; }
+
+        /// <summary>
+        /// Gets or sets the allowed claims.
+        /// </summary>
+        /// <value>
+        /// The allowed claims.
+        /// </value>
+        [DataMember]
+        public string AllowedClaims { get; set; }
+
+        /// <summary>
+        /// Gets or sets the allowed scopes.
+        /// </summary>
+        /// <value>
+        /// The allowed scopes.
+        /// </value>
+        [DataMember]
+        public string AllowedScopes { get; set; }
+
         /// <summary>
         /// Gets or sets a flag indicating if this item is active or not.
         /// </summary>

@@ -342,6 +342,22 @@ namespace Rock.Data
         public DbSet<AuthClient> AuthClients { get; set; }
 
         /// <summary>
+        /// Gets or sets the Auth Claim.
+        /// </summary>
+        /// <value>
+        /// The Auth Claim.
+        /// </value>
+        public DbSet<AuthClaim> AuthClaims { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Auth Scope.
+        /// </summary>
+        /// <value>
+        /// The Auth Scope.
+        /// </value>
+        public DbSet<AuthScope> AuthScopes { get; set; }
+
+        /// <summary>
         /// Gets or sets the Auths.
         /// </summary>
         /// <value>

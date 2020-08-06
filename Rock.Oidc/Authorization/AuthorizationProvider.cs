@@ -15,6 +15,7 @@
 // </copyright>
 
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AspNet.Security.OpenIdConnect.Primitives;
@@ -38,23 +39,41 @@ namespace Rock.Oidc.Authorization
         /// to allow the user code to decide how the request should be handled.
         /// </summary>
         /// <param name="context">The context instance associated with this event.</param>
-        public override async Task HandleTokenRequest( HandleTokenRequestContext context )
+        public override Task HandleTokenRequest( HandleTokenRequestContext context )
         {
-            var rockContext = new RockContext();
-            var userLoginService = new UserLoginService( rockContext );
-            var requestScopes = context.Request.GetScopes();
-
             // Only handle grant_type=password requests and let ASOS
             // process grant_type=refresh_token requests automatically.
             if ( context.Request.IsPasswordGrantType() )
             {
-                var user = userLoginService.GetByUserName( context.Request.Username );
+                UserLogin user = null;
+                ClaimsIdentity identity = null;
+                IEnumerable<string> allowedClientScopes = null;
+
+                // Do all the data access here so we can dispose of the rock context asap.
+                using ( var rockContext = new RockContext() )
+                {
+                    var userLoginService = new UserLoginService( rockContext );
+                    user = userLoginService.GetByUserName( context.Request.Username );
+
+                    allowedClientScopes = RockIdentityHelper.NarrowRequestedScopesToApprovedScopes( rockContext, context.Request.ClientId, context.Request.GetScopes() );
+                    var allowedClientClaims = RockIdentityHelper.GetAllowedClientClaims( rockContext, context.Request.ClientId, allowedClientScopes );
+                    identity = RockIdentityHelper.GetRockClaimsIdentity( user, allowedClientClaims );
+                }
+
+                if ( identity == null || allowedClientScopes == null )
+                {
+                    context.Reject(
+                        error: OpenIdConnectConstants.Errors.InvalidClient,
+                        description: "Invalid client configuration." );
+                    return Task.FromResult(0);
+                }
+
                 if ( user == null )
                 {
                     context.Reject(
                         error: OpenIdConnectConstants.Errors.InvalidGrant,
                         description: "Invalid credentials." );
-                    return;
+                    return Task.FromResult( 0 );
                 }
 
                 // Ensure the user is allowed to sign in.
@@ -63,7 +82,7 @@ namespace Rock.Oidc.Authorization
                     context.Reject(
                         error: OpenIdConnectConstants.Errors.InvalidGrant,
                         description: "The specified user is not allowed to sign in." );
-                    return;
+                    return Task.FromResult( 0 );
                 }
 
                 // Ensure the user is not already locked out.
@@ -72,7 +91,7 @@ namespace Rock.Oidc.Authorization
                     context.Reject(
                         error: OpenIdConnectConstants.Errors.InvalidGrant,
                         description: "Invalid credentials." );
-                    return;
+                    return Task.FromResult( 0 );
                 }
 
                 // Ensure the password is valid.
@@ -88,7 +107,7 @@ namespace Rock.Oidc.Authorization
                     context.Reject(
                         error: OpenIdConnectConstants.Errors.InvalidGrant,
                         description: "Invalid credentials." );
-                    return;
+                    return Task.FromResult( 0 );
                 }
 
                 // TODO: Reset failed attempts.
@@ -97,13 +116,13 @@ namespace Rock.Oidc.Authorization
                 //    await manager.ResetAccessFailedCountAsync( user );
                 //}
 
-                var identity = RockIdentityHelper.GetRockClaimsIdentity( user, requestScopes );
+
 
                 // Create a new authentication ticket holding the user identity.
                 var ticket = new AuthenticationTicket( identity, new AuthenticationProperties() );
 
                 // Set the list of scopes granted to the client application.
-                ticket.SetScopes( requestScopes );
+                ticket.SetScopes( allowedClientScopes );
 
                 // Set the resource servers the access token should be issued for.
                 ticket.SetResources( "resource_server" );
@@ -125,6 +144,7 @@ namespace Rock.Oidc.Authorization
 
                 context.Validate( ticket );
             }
+            return Task.FromResult( 0 );
         }
 
         /// <summary>

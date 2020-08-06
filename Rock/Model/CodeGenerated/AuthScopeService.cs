@@ -28,15 +28,15 @@ using Rock.Data;
 namespace Rock.Model
 {
     /// <summary>
-    /// AuthClient Service class
+    /// AuthScope Service class
     /// </summary>
-    public partial class AuthClientService : Service<AuthClient>
+    public partial class AuthScopeService : Service<AuthScope>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="AuthClientService"/> class
+        /// Initializes a new instance of the <see cref="AuthScopeService"/> class
         /// </summary>
         /// <param name="context">The context.</param>
-        public AuthClientService(RockContext context) : base(context)
+        public AuthScopeService(RockContext context) : base(context)
         {
         }
 
@@ -48,7 +48,7 @@ namespace Rock.Model
         /// <returns>
         ///   <c>true</c> if this instance can delete the specified item; otherwise, <c>false</c>.
         /// </returns>
-        public bool CanDelete( AuthClient item, out string errorMessage )
+        public bool CanDelete( AuthScope item, out string errorMessage )
         {
             errorMessage = string.Empty;
             return true;
@@ -58,47 +58,42 @@ namespace Rock.Model
     /// <summary>
     /// Generated Extension Methods
     /// </summary>
-    public static partial class AuthClientExtensionMethods
+    public static partial class AuthScopeExtensionMethods
     {
         /// <summary>
-        /// Clones this AuthClient object to a new AuthClient object
+        /// Clones this AuthScope object to a new AuthScope object
         /// </summary>
         /// <param name="source">The source.</param>
         /// <param name="deepCopy">if set to <c>true</c> a deep copy is made. If false, only the basic entity properties are copied.</param>
         /// <returns></returns>
-        public static AuthClient Clone( this AuthClient source, bool deepCopy )
+        public static AuthScope Clone( this AuthScope source, bool deepCopy )
         {
             if (deepCopy)
             {
-                return source.Clone() as AuthClient;
+                return source.Clone() as AuthScope;
             }
             else
             {
-                var target = new AuthClient();
+                var target = new AuthScope();
                 target.CopyPropertiesFrom( source );
                 return target;
             }
         }
 
         /// <summary>
-        /// Copies the properties from another AuthClient object to this AuthClient object
+        /// Copies the properties from another AuthScope object to this AuthScope object
         /// </summary>
         /// <param name="target">The target.</param>
         /// <param name="source">The source.</param>
-        public static void CopyPropertiesFrom( this AuthClient target, AuthClient source )
+        public static void CopyPropertiesFrom( this AuthScope target, AuthScope source )
         {
             target.Id = source.Id;
-            target.AllowedClaims = source.AllowedClaims;
-            target.AllowedScopes = source.AllowedScopes;
-            target.AllowUserApiAccess = source.AllowUserApiAccess;
-            target.ClientId = source.ClientId;
-            target.ClientSecretHash = source.ClientSecretHash;
             target.ForeignGuid = source.ForeignGuid;
             target.ForeignKey = source.ForeignKey;
             target.IsActive = source.IsActive;
+            target.IsSystem = source.IsSystem;
             target.Name = source.Name;
-            target.PostLogoutRedirectUri = source.PostLogoutRedirectUri;
-            target.RedirectUri = source.RedirectUri;
+            target.PublicName = source.PublicName;
             target.CreatedDateTime = source.CreatedDateTime;
             target.ModifiedDateTime = source.ModifiedDateTime;
             target.CreatedByPersonAliasId = source.CreatedByPersonAliasId;

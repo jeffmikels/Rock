@@ -27,27 +27,12 @@ using System.Collections.Generic;
 namespace Rock.Client
 {
     /// <summary>
-    /// Base client model for AuthClient that only includes the non-virtual fields. Use this for PUT/POSTs
+    /// Base client model for AuthScope that only includes the non-virtual fields. Use this for PUT/POSTs
     /// </summary>
-    public partial class AuthClientEntity
+    public partial class AuthScopeEntity
     {
         /// <summary />
         public int Id { get; set; }
-
-        /// <summary />
-        public string AllowedClaims { get; set; }
-
-        /// <summary />
-        public string AllowedScopes { get; set; }
-
-        /// <summary />
-        public bool AllowUserApiAccess { get; set; }
-
-        /// <summary />
-        public string ClientId { get; set; }
-
-        /// <summary />
-        public string ClientSecretHash { get; set; }
 
         /// <summary />
         public Guid? ForeignGuid { get; set; }
@@ -58,6 +43,9 @@ namespace Rock.Client
         /// <summary />
         public bool IsActive { get; set; }
 
+        /// <summary />
+        public bool IsSystem { get; set; }
+
         /// <summary>
         /// If the ModifiedByPersonAliasId is being set manually and should not be overwritten with current user when saved, set this value to true
         /// </summary>
@@ -67,10 +55,7 @@ namespace Rock.Client
         public string Name { get; set; }
 
         /// <summary />
-        public string PostLogoutRedirectUri { get; set; }
-
-        /// <summary />
-        public string RedirectUri { get; set; }
+        public string PublicName { get; set; }
 
         /// <summary>
         /// Leave this as NULL to let Rock set this
@@ -99,24 +84,19 @@ namespace Rock.Client
         public int? ForeignId { get; set; }
 
         /// <summary>
-        /// Copies the base properties from a source AuthClient object
+        /// Copies the base properties from a source AuthScope object
         /// </summary>
         /// <param name="source">The source.</param>
-        public void CopyPropertiesFrom( AuthClient source )
+        public void CopyPropertiesFrom( AuthScope source )
         {
             this.Id = source.Id;
-            this.AllowedClaims = source.AllowedClaims;
-            this.AllowedScopes = source.AllowedScopes;
-            this.AllowUserApiAccess = source.AllowUserApiAccess;
-            this.ClientId = source.ClientId;
-            this.ClientSecretHash = source.ClientSecretHash;
             this.ForeignGuid = source.ForeignGuid;
             this.ForeignKey = source.ForeignKey;
             this.IsActive = source.IsActive;
+            this.IsSystem = source.IsSystem;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
             this.Name = source.Name;
-            this.PostLogoutRedirectUri = source.PostLogoutRedirectUri;
-            this.RedirectUri = source.RedirectUri;
+            this.PublicName = source.PublicName;
             this.CreatedDateTime = source.CreatedDateTime;
             this.ModifiedDateTime = source.ModifiedDateTime;
             this.CreatedByPersonAliasId = source.CreatedByPersonAliasId;
@@ -128,9 +108,9 @@ namespace Rock.Client
     }
 
     /// <summary>
-    /// Client model for AuthClient that includes all the fields that are available for GETs. Use this for GETs (use AuthClientEntity for POST/PUTs)
+    /// Client model for AuthScope that includes all the fields that are available for GETs. Use this for GETs (use AuthScopeEntity for POST/PUTs)
     /// </summary>
-    public partial class AuthClient : AuthClientEntity
+    public partial class AuthScope : AuthScopeEntity
     {
         /// <summary>
         /// NOTE: Attributes are only populated when ?loadAttributes is specified. Options for loadAttributes are true, false, 'simple', 'expanded' 
