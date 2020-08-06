@@ -276,7 +276,7 @@ namespace Rock.Achievement.Component
 
             var stepProgram = GetStepProgramCache( achievementTypeCache );
             var stepTypeCount = stepProgram.StepTypes.Count;
-            
+
             var progress = CalculateProgress( completedStepTypeDates.Count, stepTypeCount );
             var isSuccessful = progress >= 1m;
 
@@ -304,6 +304,58 @@ namespace Rock.Achievement.Component
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets the badge markup for this achiever for this achievement.
+        /// </summary>
+        /// <param name="achievementTypeCache">The achievement type cache.</param>
+        /// <param name="achieverEntityId">The achiever entity identifier.</param>
+        /// <returns></returns>
+        public override string GetBadgeMarkup( AchievementTypeCache achievementTypeCache, int achieverEntityId )
+        {
+            if ( !achievementTypeCache.BadgeLavaTemplate.IsNullOrWhiteSpace() )
+            {
+                var mergeFields = GetBadgeMergeFields( achievementTypeCache, achieverEntityId );
+                return achievementTypeCache.BadgeLavaTemplate.ResolveMergeFields( mergeFields );
+            }
+
+            var rockContext = new RockContext();
+            var achievementTypeService = new AchievementTypeService( rockContext );
+            var progressStatement = achievementTypeService.GetProgressStatement( achievementTypeCache, achieverEntityId );
+
+            if ( progressStatement.SuccessCount < 1 )
+            {
+                return string.Empty;
+            }
+
+            var iconClass = GetStepProgramCache( achievementTypeCache )?.IconCssClass;
+
+            if ( iconClass.IsNullOrWhiteSpace() )
+            {
+                iconClass = achievementTypeCache.AchievementIconCssClass;
+            }
+
+            if ( iconClass.IsNullOrWhiteSpace() )
+            {
+                iconClass = "fa fa-medal";
+            }
+
+            var successCountMarkup = string.Empty;
+
+            if ( progressStatement.SuccessCount > 1 )
+            {
+                successCountMarkup =
+$@"<span class=""badge-count"">
+    {progressStatement.SuccessCount}
+</span>";
+            }
+
+            return
+$@"<div style=""color: #16c98d"">
+    <i class=""badge-icon {iconClass}""></i>
+    {successCountMarkup}
+</div>";
         }
 
         #region Helpers
