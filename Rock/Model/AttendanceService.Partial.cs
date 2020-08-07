@@ -1333,39 +1333,53 @@ namespace Rock.Model
             var attendanceOccurrenceGroupMemberLookupQuery = new GroupMemberService( rockContext )
                 .Queryable().Where( a => a.GroupId == attendanceOccurrenceGroupId );
 
-            if ( personIds.Count < 1000 )
+            Dictionary<int, IEnumerable<MemberLookupValue>> attendanceOccurrenceGroupMemberLookup;
+
+            if ( personIds.Any() )
             {
-                // if there are less than 1000, just get the member records for people that are scheduled, otherwise the SQL will get too complex
-                attendanceOccurrenceGroupMemberLookupQuery = attendanceOccurrenceGroupMemberLookupQuery.Where( a => personIds.Contains( a.PersonId ) );
-            }
-
-            var attendanceOccurrenceGroupGroupTypeId = new GroupService( rockContext ).GetSelect( attendanceOccurrenceGroupId, s => s.GroupTypeId );
-            var attendanceOccurrenceGroupGroupType = GroupTypeCache.Get( attendanceOccurrenceGroupGroupTypeId );
-
-            var attendanceOccurrenceGroupTypeRoleCacheLookup = attendanceOccurrenceGroupGroupType?.Roles.ToDictionary( k => k.Id, v => v );
-
-            var attendanceOccurrenceGroupMemberLookup = attendanceOccurrenceGroupMemberLookupQuery.Select( a => new
-            {
-                a.Id,
-                a.PersonId,
-                a.GroupRoleId,
-                MemberAssignments = a.GroupMemberAssignments.Where( x => x.ScheduleId.HasValue ).Select( s => new
+                if (personIds.Count == 1)
                 {
-                    Schedule = s.Schedule,
-                    LocationId = s.LocationId,
-                    LocationName = s.LocationId.HasValue ? s.Location.Name : null
-                } ),
-            } )
-                .ToList()
-                .GroupBy( a => a.PersonId )
-                .ToDictionary(
-                    k => k.Key,
-                    v => v.Select( s => new
+                    var personId = personIds[0];
+                    attendanceOccurrenceGroupMemberLookupQuery = attendanceOccurrenceGroupMemberLookupQuery.Where( a =>  a.PersonId == personId );
+                }
+                else if ( personIds.Count < 1000 )
+                {
+                    // if there are less than 1000, just get the member records for people that are scheduled, otherwise the SQL will get too complex
+                    attendanceOccurrenceGroupMemberLookupQuery = attendanceOccurrenceGroupMemberLookupQuery.Where( a => personIds.Contains( a.PersonId ) );
+                }
+
+                var attendanceOccurrenceGroupGroupTypeId = new GroupService( rockContext ).GetSelect( attendanceOccurrenceGroupId, s => s.GroupTypeId );
+                var attendanceOccurrenceGroupGroupType = GroupTypeCache.Get( attendanceOccurrenceGroupGroupTypeId );
+
+                var attendanceOccurrenceGroupTypeRoleCacheLookup = attendanceOccurrenceGroupGroupType?.Roles.ToDictionary( k => k.Id, v => v );
+
+                attendanceOccurrenceGroupMemberLookup = attendanceOccurrenceGroupMemberLookupQuery.Select( a => new
+                {
+                    a.Id,
+                    a.PersonId,
+                    a.GroupRoleId,
+                    MemberAssignments = a.GroupMemberAssignments.Where( x => x.ScheduleId.HasValue ).Select( s => new MemberLookupValueAssignment
                     {
-                        MemberId = s.Id,
-                        GroupRole = attendanceOccurrenceGroupTypeRoleCacheLookup.GetValueOrNull( s.GroupRoleId ),
-                        MemberAssignments = s.MemberAssignments.ToList()
-                    } ) );
+                        Schedule = s.Schedule,
+                        LocationId = s.LocationId,
+                        LocationName = s.LocationId.HasValue ? s.Location.Name : null
+                    } ),
+                } )
+                    .ToList()
+                    .GroupBy( a => a.PersonId )
+                    .ToDictionary(
+                        k => k.Key,
+                        v => v.Select( s => new MemberLookupValue
+                        {
+                            MemberId = s.Id,
+                            GroupRole = attendanceOccurrenceGroupTypeRoleCacheLookup.GetValueOrNull( s.GroupRoleId ),
+                            MemberAssignments = s.MemberAssignments.ToList()
+                        } ) );
+            }
+            else
+            {
+                attendanceOccurrenceGroupMemberLookup = null;
+            }
 
             IEnumerable<SchedulerResourceAttend> schedulerResourceAttendList = scheduledAttendancesList.Select( a =>
             {
@@ -1379,7 +1393,7 @@ namespace Rock.Model
                 }
 
                 var attendanceOccurrenceGroupMemberInfo = attendanceOccurrenceGroupMemberLookup
-                    .GetValueOrNull( a.PersonId )
+                    ?.GetValueOrNull( a.PersonId )
                     ?.OrderBy( x => x.GroupRole?.Order ?? int.MaxValue )
                     ?.FirstOrDefault();
 
@@ -2151,6 +2165,20 @@ namespace Rock.Model
              } ).ToList();
 
             rockContext.BulkInsert( attendancesToBulkInsert );
+        }
+
+        private class MemberLookupValue
+        {
+            public int MemberId { get; set; }
+            public GroupTypeRoleCache GroupRole { get; set; }
+            public List<MemberLookupValueAssignment> MemberAssignments { get; set; }
+        }
+
+        private class MemberLookupValueAssignment
+        {
+            public Schedule Schedule { get; set; }
+            public int? LocationId { get; set; }
+            public string LocationName { get; set; }
         }
 
         #endregion BulkImport related

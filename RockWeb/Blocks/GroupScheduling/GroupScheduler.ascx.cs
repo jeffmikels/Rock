@@ -375,12 +375,25 @@ btnCopyToClipboard.ClientID );
             List<int> childGroupIds = new List<int>();
             if ( btnShowChildGroups.Attributes["show-child-groups"].AsBoolean() )
             {
-                childGroupIds = groupService.Queryable()
+                var childGroupIdQuery = groupService.Queryable()
                     .Where( a =>
-                        a.IsActive &&
-                        a.ParentGroupId.HasValue &&
-                        pickedGroupIds.Contains( a.ParentGroupId.Value ) )
-                    .Select( a => a.Id ).ToList();
+                        a.IsActive
+                        && !a.IsArchived
+                        && a.ParentGroupId.HasValue
+                        && a.GroupType.IsSchedulingEnabled
+                        && !a.DisableScheduling );
+
+                if ( pickedGroupIds.Count() == 1)
+                {
+                    var pickedGroupId = pickedGroupIds[0];
+                    childGroupIdQuery = childGroupIdQuery.Where( a => a.ParentGroupId == pickedGroupId );
+                }
+                else
+                {
+                    childGroupIdQuery = childGroupIdQuery.Where( a => pickedGroupIds.Contains( a.ParentGroupId.Value ) );
+                }
+
+                childGroupIds = childGroupIdQuery.Select( a => a.Id ).ToList();
             }
 
             List<int> groupIdsToQuery = pickedGroupIds.Union( childGroupIds ).ToList();
@@ -1143,17 +1156,15 @@ btnCopyToClipboard.ClientID );
 
             List<int> selectedGroupLocationIds = new List<int>();
 
-            foreach ( var groupId in groupIds )
+            var groupIdsWithLocations = groupGroupLocationIdsLookupByGroupId.Where(a => a.Value.Any()).Select( a => a.Key ).ToList();
+
+            foreach ( var groupId in groupIdsWithLocations )
             {
+                var groupGroupLocationIds = groupGroupLocationIdsLookupByGroupId.GetValueOrNull( groupId ) ?? new List<int>();
+
                 using ( var missingAttendanceOccurrenceRockContext = new RockContext() )
                 {
                     var missingAttendanceOccurrenceOccurrenceService = new AttendanceOccurrenceService( missingAttendanceOccurrenceRockContext );
-                    var groupGroupLocationIds = groupGroupLocationIdsLookupByGroupId.GetValueOrNull( groupId ) ?? new List<int>();
-
-                    if ( !groupGroupLocationIds.Any() )
-                    {
-                        continue;
-                    }
 
                     selectedGroupLocationIds.AddRange( groupGroupLocationIds );
 
