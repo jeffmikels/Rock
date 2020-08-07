@@ -206,27 +206,5 @@ namespace Rock.Oidc.Authorization
                 .Where( ac => ac.Scope.IsActive)
                 .ToDictionary( vc => vc.Name, vc => vc.Value );
         }
-
-        private static Dictionary<string, string> _scopeShortDescriptions = new Dictionary<string, string>
-        {
-            { OpenIdConnectConstants.Scopes.Address, "Address" },
-            { OpenIdConnectConstants.Scopes.Email, "Email Address" },
-            { OpenIdConnectConstants.Scopes.OfflineAccess, "Allows the use of a Refresh Token" },
-            { OpenIdConnectConstants.Scopes.OpenId, "Authorization Information" },
-            { OpenIdConnectConstants.Scopes.Phone, "Phone Number" },
-            { OpenIdConnectConstants.Scopes.Profile, "Profile Information (Name, Photo, Gender)" }
-        };
-
-        public static string GetScopeDescription( string scope )
-        {
-            return _scopeShortDescriptions.GetValueOrDefault( scope, string.Empty );
-        }
-
-        public class AllowedClaims
-        {
-            public string Scope { get; set; }
-            public string Claim { get; set; }
-            public string Value { get; set; }
-        }
     }
 }
