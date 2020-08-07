@@ -410,9 +410,7 @@ $@"<div style=""color: #16c98d"">
 
             query = query
                 .AsNoTracking()
-                .Where( s =>
-                    s.PersonAliasId == personAliasId &&
-                    s.CompletedDateTime.HasValue );
+                .Where( s => s.PersonAliasId == personAliasId );
 
             if ( minDate.HasValue )
             {
@@ -426,7 +424,13 @@ $@"<div style=""color: #16c98d"">
             }
 
             return query
+                .Select( s => new
+                {
+                    s.StepTypeId,
+                    s.CompletedDateTime
+                } )
                 .ToList()
+                .Where( s => s.CompletedDateTime.HasValue )
                 .GroupBy( s => s.StepTypeId )
                 .Select( g => new
                 {
