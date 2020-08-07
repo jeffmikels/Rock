@@ -391,7 +391,7 @@
                                                         <div class="d-flex justify-content-between">
                                                             <span class="board-column-title"><asp:Literal ID="lMultiGroupModeColumnGroupNameHtml" runat="server" /></span>
                                                             <asp:LinkButton ID="btnMultiGroupModeColumnSelectedGroup" runat="server"
-                                                            CssClass="p-0"
+                                                            CssClass="text-color p-0"
                                                             Text="fa fa-check-square"
                                                             AutoPostBack="true"
                                                             OnClick="btnMultiGroupModeColumnSelectedGroup_Click"/>
